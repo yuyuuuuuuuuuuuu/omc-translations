@@ -2,11 +2,16 @@
 
 name: Fetch Latest Ended Contest Tasks & Editorial
 
+# ───────────────────────────────────────────────────────────
+# ここで権限を書き込み可能に指定
+# ───────────────────────────────────────────────────────────
+permissions:
+  contents: write
+
 on:
-  # 毎日 04:30 UTC (= 13:30 JST) にスケジュール実行
   schedule:
+    # 毎日 04:30 UTC (= 13:30 JST)
     - cron: '30 4 * * *'
-  # 手動実行ボタンを用意
   workflow_dispatch:
 
 jobs:
@@ -58,8 +63,6 @@ jobs:
       # 6) 変更を検知したらコミット & プッシュ
       # ────────────────────────────────────────────────────
       - name: Commit & push changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
