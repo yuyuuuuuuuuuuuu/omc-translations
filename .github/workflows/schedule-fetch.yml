@@ -2,57 +2,67 @@
 
 name: Fetch Latest Ended Contest Tasks & Editorial
 
-# ───────────────────────────────────────────────────────────
-# 1) いつ実行するか（トリガー）
-# ───────────────────────────────────────────────────────────
 on:
-  # (A) スケジュール実行: 毎日 12:00 UTC (= 日本時間 21:00 JST)
+  # 毎日 04:30 UTC (= 13:30 JST) にスケジュール実行
   schedule:
     - cron: '30 4 * * *'
-  # (B) 手動実行を可能にする（GitHub 上で「Run workflow」ボタンが現れる）
+  # 手動実行ボタンを用意
   workflow_dispatch:
 
 jobs:
   run-fetch:
-    # Ubuntu 環境上で動かす
     runs-on: ubuntu-latest
 
     steps:
-      # ステップ 1: リポジトリをチェックアウト（最新のコードを GitHub Actions に引き込む）
+      # ────────────────────────────────────────────────────
+      # 1) リポジトリをチェックアウト（GITHUB_TOKEN を明示的に渡す）
+      # ────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
-      # ステップ 2: Python をセットアップ（バージョン指定可）
+      # ────────────────────────────────────────────────────
+      # 2) Python をセットアップ
+      # ────────────────────────────────────────────────────
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
 
-      # ステップ 3: 依存ライブラリをインストール
+      # ────────────────────────────────────────────────────
+      # 3) 依存ライブラリをインストール
+      #    - requests, beautifulsoup4, playwright
+      # ────────────────────────────────────────────────────
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ステップ 4: Playwright ブラウザバイナリをインストール
+      # ────────────────────────────────────────────────────
+      # 4) Playwright のブラウザバイナリをインストール
+      # ────────────────────────────────────────────────────
       - name: Install Playwright browsers
         run: |
           python -m playwright install chromium
 
-      # ステップ 5: スクリプトを実行する
+      # ────────────────────────────────────────────────────
+      # 5) スクリプトを実行する
+      # ────────────────────────────────────────────────────
       - name: Run fetch_latest_ended.py
         run: |
           python scripts/fetch_latest_ended.py
 
-      # ステップ 6: もしファイルが変更されていればコミット＆プッシュする
+      # ────────────────────────────────────────────────────
+      # 6) 変更を検知したらコミット & プッシュ
+      # ────────────────────────────────────────────────────
       - name: Commit & push changes
         env:
-          # GitHub Actions の GITHUB_TOKEN によって安全にコミット/プッシュ
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # 変更があればステージングしてコミット＆プッシュ
           if [[ -n "$(git status --porcelain)" ]]; then
             git add languages/ja/contests
             git commit -m "Auto-fetch: latest ended contest tasks & editorials"
