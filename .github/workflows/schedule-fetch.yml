@@ -46,7 +46,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [[ -n "$(git status --porcelain)" ]]; then
-            git add languages/ja/contests
+            git add languages/*
             git commit -m "Auto-fetch & translate: latest ended contest tasks & editorials"
             git push origin HEAD:main
           else
