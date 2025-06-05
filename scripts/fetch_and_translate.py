@@ -7,6 +7,8 @@ import json
 import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
+import subprocess
+
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Page, Browser
 import openai
@@ -340,9 +342,9 @@ def check_existence_problem(contest_id: str, task_id: str, lang: str = "en") -> 
 def main():
     """
     OMC の現在開催中コンテストを検出し、
-    1) 各タスク (問題文) の日本語版を取得 → 英語翻訳 → 他言語翻訳
+    1) 各タスク (問題文) の日本語版を取得 → 英語翻訳 → KaTeX レンダリング → 中央寄せ → 即時 git commit & push
     2) コンテストページから「Contest Duration (分)」を取得
-    3) contest_id + duration_min (分) を JSON 形式で標準出力する
+    3) contest_id + duration_min (分) をスペース無し JSON 形式で標準出力する
     """
     with sync_playwright() as p:
         print("→ Headless Chromium を起動します")
@@ -365,8 +367,8 @@ def main():
         if current_contest is None:
             print("[Info] 開催中のコンテストが見つかりませんでした。終了します。")
             browser.close()
-            # 空のデータでも JSON を返しておく
-            print(json.dumps({"contest_id": "", "duration_min": 0}, ensure_ascii=False))
+            # 空の JSON でも返してワークフローが壊れないように
+            print(json.dumps({"contest_id":"", "duration_min":0}, ensure_ascii=False, separators=(',',':')))
             sys.exit(0)
         print(f"→ 開催中コンテスト ID = {current_contest}")
 
@@ -374,25 +376,24 @@ def main():
         task_ids = fetch_task_ids_playwright(page, current_contest)
         if not task_ids:
             print(f"[Warning] コンテスト {current_contest} にタスクが見つかりません。")
-            # タスクがない場合でも JSON を返す
-            print(json.dumps({"contest_id": current_contest, "duration_min": 0}, ensure_ascii=False))
+            # タスクなしでも JSON を返す
+            print(json.dumps({"contest_id":current_contest, "duration_min":0}, ensure_ascii=False, separators=(',',':')))
             browser.close()
             sys.exit(0)
-
         print(f"→ {current_contest} のタスク一覧 = {task_ids}")
 
         # 4) 翻訳対象言語リストを読み込む
         languages = load_languages_list()
         print(f"→ 翻訳対象言語: {languages}")
 
-        # 5) 各タスクについて 日本語版を取得→英語翻訳→他言語翻訳
-        en_jp_map: dict[str, Path] = {}
+        # 5) 各タスクについて 日本語版を取得→英語翻訳→KaTeXレンダリング→中央寄せ→即時 push
         for tid in task_ids:
+            # (A) 日本語版を取得
             jp_path = save_jp_problem(current_contest, tid, page)
             if jp_path is None:
                 continue
 
-            # 英語 (en) 翻訳
+            # (B) 英語 (en) 翻訳、レンダリング、中央寄せ
             if not check_existence_problem(current_contest, tid, lang="en"):
                 save_translated_html(
                     contest_id=current_contest,
@@ -402,31 +403,29 @@ def main():
                     jp_filepath=jp_path,
                     page=page
                 )
+
+                # ────────────── git add／commit／push ──────────────
+                try:
+                    subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
+                    subprocess.run(["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"], check=True)
+                    file_to_add = f"languages/en/contests/{current_contest}/tasks/{tid}.html"
+                    subprocess.run(["git", "add", file_to_add], check=True)
+                    commit_msg = f"Add translated task en: {current_contest}/{tid}"
+                    subprocess.run(["git", "commit", "-m", commit_msg], check=True)
+                    subprocess.run(["git", "push", "origin", "HEAD:main"], check=True)
+                    print(f"[Git] {file_to_add} をコミット＆プッシュしました。")
+                except subprocess.CalledProcessError as e:
+                    print(f"[Error] Git 操作中に例外発生: {e}")
+                # ──────────────────────────────────────────────────────────
+
             else:
                 print(f"[Skip EN] {current_contest}/{tid} はすでに英語翻訳済みです。")
-            en_jp_map[tid] = jp_path
 
-        # 6) 英語翻訳後に残り言語を処理
-        remaining_langs = [l for l in languages if l != "en"]
-        if remaining_langs:
-            print(f"→ 英語翻訳完了 → 他言語 ({remaining_langs}) を順に処理します")
-            for lang in remaining_langs:
-                for tid, jp_path in en_jp_map.items():
-                    if not check_existence_problem(current_contest, tid, lang=lang):
-                        save_translated_html(
-                            contest_id=current_contest,
-                            task_id=tid,
-                            lang=lang,
-                            term="task",
-                            jp_filepath=jp_path,
-                            page=page
-                        )
-                    else:
-                        print(f"[Skip {lang}] {current_contest}/{tid} はすでに {lang} 翻訳済みです。")
+            # ※必要であれば、同様に remaining_langs をループして他言語翻訳＆push も可能
 
         print("→ すべてのタスク翻訳処理が完了しました。")
 
-        # 7) コンテストページから「Contest Duration (分)」を取得
+        # 6) コンテストページから「Contest Duration (分)」を取得
         try:
             contest_url = f"{BASE_URL}/contests/{current_contest}"
             print(f"→ Contest ページから duration を取得: {contest_url}")
@@ -454,16 +453,14 @@ def main():
             print(f"[Warning] duration_min の取得中に例外発生: {e}")
             duration_min = 60
 
-        # 8) contest_id と duration_min を、スペース無しの JSON 形式で標準出力
+        # 7) contest_id と duration_min をスペース無し JSON 形式で出力
         result = {
             "contest_id": current_contest,
             "duration_min": duration_min
         }
-        # separators=(',',':') を指定すると、出力が {"contest_id":"omc046","duration_min":80} のように空白なしになる
         print(json.dumps(result, ensure_ascii=False, separators=(',',':')))
 
         browser.close()
-
 
 if __name__ == "__main__":
     main()
