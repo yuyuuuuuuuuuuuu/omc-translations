@@ -64,10 +64,11 @@ jobs:
           echo "::set-output name=contest_id::$CONTEST_ID"
           echo "::set-output name=duration_min::$DURATION_MIN"
 
+          
       # ────────────────────────────────────────────────────────────
-      # 【変更】 Step④：コンテスト開始 9:00 (UTC12:00) を基準に duration_min 分後まで待機
+      # 【変更】 Step④：コンテスト開始 21:00 JST (UTC 12:00) を基準に duration_min 分後まで待機
       # ────────────────────────────────────────────────────────────
-      - name: Wait until Contest Start (9:00 JST) + duration_min
+      - name: Wait until Contest Start (21:00 JST) + duration_min
         id: wait_editorial
         shell: bash
         run: |
@@ -79,19 +80,18 @@ jobs:
           fi
 
           # ─────────────────────────────────────────────────────────
-          # (1) 当日9:00 JST を UTC に直した Unix タイムスタンプを計算
-          #     JST 9:00 = UTC 00:00 にあたるので、
-          #     date -u -d 'today 00:00:00' の結果を使う
+          # (1) 当日 21:00 JST を UTC に直して Unix タイムスタンプを計算
+          #     JST 21:00 は UTC 12:00 にあたる → “today 12:00:00” を使う
           # ─────────────────────────────────────────────────────────
-          START_UTC=$(date -u -d 'today 00:00:00' +%s)
-          echo "→ 当日 9:00 JST は UTC $(date -u -d 'today 00:00:00' '+%Y-%m-%d %H:%M:%S') (Unix: $START_UTC)"
+          START_UTC=$(date -u -d '12:00:00' +%s)
+          echo "→ 当日 21:00 JST は UTC $(date -u -d '12:00:00' '+%Y-%m-%d %H:%M:%S') (Unix: $START_UTC)"
 
           # ─────────────────────────────────────────────────────────
-          # (2) “開始時刻” + (duration_min * 60 秒) を絶対target として計算
+          # (2) “開始時刻” + (duration_min * 60 秒) を絶対 target として計算
           # ─────────────────────────────────────────────────────────
           D_SEC=$(( D_MIN * 60 ))
           TARGET=$(( START_UTC + D_SEC ))
-          echo "→ Contest Start (JST 9:00) + ${D_MIN} 分 = Unix $TARGET (UTC: $(date -u -d "@$TARGET" '+%Y-%m-%d %H:%M:%S'))"
+          echo "→ Contest Start (JST 21:00) + ${D_MIN} 分 = Unix $TARGET (UTC: $(date -u -d "@$TARGET" '+%Y-%m-%d %H:%M:%S'))"
 
           # ─────────────────────────────────────────────────────────
           # (3) 今の UTC 時刻と target を比較 → 残り秒数だけ sleep
@@ -106,6 +106,7 @@ jobs:
           fi
 
           echo "===> 約 ${D_MIN} 分後 (解説公開タイミング) に到達しました"
+
 
       - name: Run fetch_editorial.py (Editorial)
         id: fetch_editorial
