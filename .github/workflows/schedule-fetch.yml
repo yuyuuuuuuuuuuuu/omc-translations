@@ -1,13 +1,8 @@
 name: OMC Fetch & Translate (Tasks → Editorial)
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 1) スケジュール：JST 21:00 の「1 分前」（JST 20:59）に起動
-#    GitHub Actions の cron は UTC ベースなので、JST-9h → UTC に直す。
-#    JST 20:59 → UTC 11:59 → cron: '59 11 * * *'
-# ──────────────────────────────────────────────────────────────────────────────
 on:
   schedule:
-    - cron: '59 11 * * *'  # 毎日 20:59 JST (= UTC 11:59) にワークフローをキック
+    - cron: '58 11 * * *'  # 毎日 20:59 JST (= UTC11:59)
   workflow_dispatch:
 
 permissions:
@@ -16,12 +11,9 @@ permissions:
 jobs:
   fetch_and_wait:
     runs-on: ubuntu-latest
-    timeout-minutes: 360  # 最大 6 時間実行を許容（コンテスト 150 分 + buffer + 翻訳などを考慮）
+    timeout-minutes: 360
 
     steps:
-      # ────────────────────────────────────────────────────────────
-      # ステップ①：Checkout & Python 準備
-      # ────────────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -42,14 +34,11 @@ jobs:
         run: |
           python -m playwright install chromium
 
-      # ────────────────────────────────────────────────────────────
-      # ステップ②：「JST 21:00（UTC 12:00）になるまで待機」
-      # ────────────────────────────────────────────────────────────
       - name: Wait until JST 21:00 (UTC 12:00)
         shell: bash
         run: |
           echo "=== 現在の UTC 時刻: $(date -u '+%Y-%m-%d %H:%M:%S') ==="
-          # UTC 12:00:00 は JST 21:00:00 と同義
+          # JST 21:00 は UTC 12:00
           TARGET_UTC=$(date -u -d '12:00:00' +%s)
           while true; do
             NOW_UTC=$(date -u +%s)
@@ -58,12 +47,8 @@ jobs:
             fi
             sleep 1
           done
-          echo "=== JST 21:00 (UTC 12:00) 到達！次ステップに進みます ==="
+          echo "=== JST 21:00 (UTC 12:00) 到達 ==="
 
-      # ────────────────────────────────────────────────────────────
-      # ステップ③：コンテスト開始 (9 時ちょうど) に tasks を取得＆翻訳
-      #             → 同時に「CONTEST_ID」「DURATION_MIN」を出力してもらう
-      # ────────────────────────────────────────────────────────────
       - name: Run fetch_and_translate.py (Tasks) → Extract CONTEST_ID & DURATION
         id: fetch_tasks
         env:
@@ -72,41 +57,56 @@ jobs:
           OMC_PASSWORD:       ${{ secrets.OMC_PASSWORD }}
         shell: bash
         run: |
-          # fetch_and_translate.py を実行しつつ、
-          # stdout に JSON 形式で CONTEST_ID と DURATION_MIN を出力してもらう
-          #
-          # 例: {"contest_id":"omc251","duration_min":100}
-          #
           RESULT_JSON=$(python3 scripts/fetch_and_translate.py)
           echo "Fetch & Translate Tasks 結果: $RESULT_JSON"
-          # JSON を解析して output にセット
           CONTEST_ID=$(echo "$RESULT_JSON" | grep -Po '(?<="contest_id":")[^"]+')
           DURATION_MIN=$(echo "$RESULT_JSON" | grep -Po '(?<="duration_min":)\d+')
           echo "::set-output name=contest_id::$CONTEST_ID"
           echo "::set-output name=duration_min::$DURATION_MIN"
 
       # ────────────────────────────────────────────────────────────
-      # ステップ④：コンテスト終了まで待機（duration_min 分 + 30 秒 buffer）
+      # 【変更】 Step④：コンテスト開始 9:00 (UTC12:00) を基準に duration_min 分後まで待機
       # ────────────────────────────────────────────────────────────
-      - name: Wait until Contest Ended (+30秒バッファ)
+      - name: Wait until Contest Start (9:00 JST) + duration_min
         id: wait_editorial
         shell: bash
         run: |
           CONTEST_ID="${{ steps.fetch_tasks.outputs.contest_id }}"
           D_MIN="${{ steps.fetch_tasks.outputs.duration_min }}"
           if [ -z "$D_MIN" ] || [ "$D_MIN" -le 0 ]; then
-            echo "::warning::duration_min が正しくありません。デフォルトで 60 分を使用します"
+            echo "::warning::duration_min が不正です。デフォルトで 60 分を設定します。"
             D_MIN=60
           fi
-          # 秒数計算
-          D_SEC=$(( D_MIN * 60 + 30 ))
-          echo "===> コンテスト ${CONTEST_ID} は ${D_MIN} 分 + 30 秒 (= ${D_SEC} 秒) 後に終了想定"
-          sleep "${D_SEC}"
-          echo "===> 約 ${D_MIN} 分後 (編集タイミング) に到達しました"
 
-      # ────────────────────────────────────────────────────────────
-      # ステップ⑤：fetch_editorial.py を実行 → 解説取得・翻訳
-      # ────────────────────────────────────────────────────────────
+          # ─────────────────────────────────────────────────────────
+          # (1) 当日9:00 JST を UTC に直した Unix タイムスタンプを計算
+          #     JST 9:00 = UTC 00:00 にあたるので、
+          #     date -u -d 'today 00:00:00' の結果を使う
+          # ─────────────────────────────────────────────────────────
+          START_UTC=$(date -u -d 'today 00:00:00' +%s)
+          echo "→ 当日 9:00 JST は UTC $(date -u -d 'today 00:00:00' '+%Y-%m-%d %H:%M:%S') (Unix: $START_UTC)"
+
+          # ─────────────────────────────────────────────────────────
+          # (2) “開始時刻” + (duration_min * 60 秒) を絶対target として計算
+          # ─────────────────────────────────────────────────────────
+          D_SEC=$(( D_MIN * 60 ))
+          TARGET=$(( START_UTC + D_SEC ))
+          echo "→ Contest Start (JST 9:00) + ${D_MIN} 分 = Unix $TARGET (UTC: $(date -u -d "@$TARGET" '+%Y-%m-%d %H:%M:%S'))"
+
+          # ─────────────────────────────────────────────────────────
+          # (3) 今の UTC 時刻と target を比較 → 残り秒数だけ sleep
+          # ─────────────────────────────────────────────────────────
+          NOW=$(date -u +%s)
+          SLEEP_SEC=$(( TARGET - NOW ))
+          if [ "$SLEEP_SEC" -le 0 ]; then
+            echo "→ すでに経過しているため、sleep をスキップ"
+          else
+            echo "→ あと ${SLEEP_SEC} 秒（約 $((SLEEP_SEC/60)) 分）待機します"
+            sleep "$SLEEP_SEC"
+          fi
+
+          echo "===> 約 ${D_MIN} 分後 (解説公開タイミング) に到達しました"
+
       - name: Run fetch_editorial.py (Editorial)
         id: fetch_editorial
         env:
@@ -119,15 +119,11 @@ jobs:
           echo ">>> Starting fetch_editorial.py for contest ${CONTEST_ID}"
           python3 scripts/fetch_editorial.py
 
-      # ────────────────────────────────────────────────────────────
-      # ステップ⑥：Git へ Commit & Push（Tasks＋Editorial の両方まとめて一度コミット）
-      # ────────────────────────────────────────────────────────────
       - name: Commit & Push all changes
         shell: bash
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # 何らかのファイル更新があったらコミット／プッシュ
           if [[ -n "$(git status --porcelain)" ]]; then
             git add languages/
             git commit -m "Auto: fetch & translate tasks and editorial for contest ${{ steps.fetch_tasks.outputs.contest_id }}"
