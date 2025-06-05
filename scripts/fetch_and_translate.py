@@ -5,10 +5,12 @@ import sys
 import time
 import json
 import requests
-import tiktoken
 from bs4 import BeautifulSoup
 from pathlib import Path
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+
+# Playwright 関連
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Page, Browser
+
 import openai
 
 # ───────────────────────────────────────────────────────────
@@ -21,49 +23,94 @@ HOMEPAGE_URL = BASE_URL + "/"
 LANG_CONFIG_PATH = Path(__file__).parents[1] / "languages" / "config.json"
 OUTPUT_ROOT      = Path(__file__).parents[1] / "languages"
 
+# OpenAI API キー（必須）
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_KEY:
     print("[Error] 環境変数 OPENAI_API_KEY が設定されていません。")
     sys.exit(1)
-
 openai.api_key = OPENAI_KEY
 GPT_MODEL = "gpt-4o-mini"
+
+# OMC ログイン用ユーザ情報（環境変数から取得）
+OMC_USERNAME = os.getenv("OMC_USERNAME")
+OMC_PASSWORD = os.getenv("OMC_PASSWORD")
+if not (OMC_USERNAME and OMC_PASSWORD):
+    print("[Error] 環境変数 OMC_USERNAME / OMC_PASSWORD が設定されていません。")
+    sys.exit(1)
 
 
 # ───────────────────────────────────────────────────────────
 # 2) ================= Playwright Helper ===================
 # ───────────────────────────────────────────────────────────
 
-def extract_div_innerhtml_with_playwright(url: str, div_id: str, timeout: int = 8000) -> str:
+def login_omc_with_playwright(page: Page) -> bool:
+    login_url = BASE_URL + "/login"
+    print("→ OMC login ページを開きます:", login_url)
+    page.goto(login_url, wait_until="networkidle")
+
+    # <form action="https://onlinemathcontest.com/login"> が現れるまで待つ
+    try:
+        page.wait_for_selector("form[action='https://onlinemathcontest.com/login']", timeout=8000)
+    except PlaywrightTimeoutError:
+        print("[Error] ログインフォームが見つかりませんでした。")
+        return False
+
+    # CSRF トークンを取得（hidden input）
+    csrf_token = page.get_attribute("input[name='_token']", "value")
+    if not csrf_token:
+        print("[Error] CSRF トークン(input[name='_token']) を取得できませんでした。")
+        return False
+    print(f"→ 取得した CSRF トークン: {csrf_token}")
+
+    # 「hidden input」に fill する必要はなく、
+    # フォームを submit する際に自動で POST データに含まれる
+
+    # ユーザ名・パスワードを入力
+    page.fill("input[name='display_name']", OMC_USERNAME)
+    page.fill("input[name='password']", OMC_PASSWORD)
+
+    # 送信ボタンをクリック
+    page.click("button[type='submit']")
+
+    # ページロードを待つ
+    page.wait_for_load_state("networkidle")
+
+    # ログイン成功判定（/login のままリダイレクトされていないかどうか）
+    if page.url.endswith("/login"):
+        print("[Error] ログインに失敗しました。認証情報を確認してください。")
+        return False
+
+    print("→ ログイン成功 (リダイレクト先:", page.url, ")")
+    return True
+
+
+def extract_div_innerhtml_with_playwright(page: Page, url: str, div_id: str, timeout: int = 8000) -> str:
     """
-    指定した URL を Playwright で開き、<div id="{div_id}"> の innerHTML を取得して返す。
+    ログイン済みの page オブジェクトを使って、指定 URL を開き、
+    <div id="{div_id}"> の innerHTML を取得して返す。
     取得に失敗した場合は空文字を返す。
     """
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-            page.goto(url, wait_until="networkidle")
-            try:
-                page.wait_for_selector(f"#{div_id}", timeout=timeout)
-            except PlaywrightTimeoutError:
-                print(f"[Timeout] {url} に #{div_id} が現れませんでした。")
-                browser.close()
-                return ""
-            content = page.eval_on_selector(f"#{div_id}", "el => el.innerHTML")
-            browser.close()
-            return content or ""
+        page.goto(url, wait_until="networkidle")
+        try:
+            page.wait_for_selector(f"#{div_id}", timeout=timeout)
+        except PlaywrightTimeoutError:
+            print(f"[Timeout] {url} に #{div_id} が現れませんでした。")
+            return ""
+        content = page.eval_on_selector(f"#{div_id}", "el => el.innerHTML")
+        return content or ""
     except Exception as e:
         print(f"[Error] Playwright 例外: {url} -> {e}")
         return ""
 
 
-def render_html_with_playwright(file_path: Path):
+def render_html_with_playwright(page: Page, file_path: Path):
     """
     1) file_path に一度最低限の <head> + KaTeX スクリプトを付け加えて保存
-    2) Playwright で headless Chromium を起動し、JS レンダリング後の HTML を取得
+    2) Playwright の同じ page オブジェクトで file:// を開き、JS レンダリング後の HTML を取得
     3) <body> 内だけを抜き出し、最終 HTML として file_path に上書き
     """
+    # KaTeX 用の <head> を追加して一時的にラップする
     new_header = """<!DOCTYPE html>
 <html>
 <head>
@@ -84,20 +131,17 @@ def render_html_with_playwright(file_path: Path):
 </head>
 <body>
 """
-
     original_content = file_path.read_text(encoding="utf-8")
     wrapped = new_header + original_content + "\n</body></html>"
     file_path.write_text(wrapped, encoding="utf-8")
 
+    # file:// で開く
     file_url = "file://" + str(file_path.resolve())
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto(file_url, wait_until="networkidle")
-        page.wait_for_load_state("networkidle")
-        full_html = page.content()
-        browser.close()
+    page.goto(file_url, wait_until="networkidle")
+    page.wait_for_load_state("networkidle")
+    full_html = page.content()
 
+    # BeautifulSoup で <body> 部分だけを抜き出す
     soup = BeautifulSoup(full_html, "html.parser")
     body_content = soup.body.decode_contents()
 
@@ -122,6 +166,10 @@ def render_html_with_playwright(file_path: Path):
 # ───────────────────────────────────────────────────────────
 
 def fetch_url_html(url: str) -> str:
+    """
+    通常の requests.get で HTML を文字列として取得
+    （ただしログイン必須のページでは使用しない）
+    """
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (X11; Linux x86_64) "
@@ -133,12 +181,17 @@ def fetch_url_html(url: str) -> str:
     resp.raise_for_status()
     return resp.text
 
-
-def find_latest_ended_contest(html: str) -> str | None:
+def find_current_contest(html: str) -> str | None:
+    """
+    トップページの生 HTML を BeautifulSoup で解析し、
+    <div class="contest-status"> に "開催中" と書かれている最初のコンテスト ID を返す。
+    見つからなければ None を返す。
+    """
     soup = BeautifulSoup(html, "html.parser")
     for header_div in soup.select("div.contest-header"):
         status_div = header_div.find("div", class_="contest-status")
-        if status_div and "終了済" in status_div.get_text(strip=True):
+        if status_div and "開催中" in status_div.get_text(strip=True):
+            # 開催中の次に来る <a class="contest-name" href="/contests/omcXXX">
             sib = header_div.find_next_sibling()
             while sib:
                 if sib.name == "a" and "contest-name" in sib.get("class", []):
@@ -148,13 +201,16 @@ def find_latest_ended_contest(html: str) -> str | None:
                 sib = sib.find_next_sibling()
     return None
 
-
 def fetch_task_ids(contest_id: str) -> list[str]:
+    """
+    contest_id を受け取り、そのコンテストの tasks リンクをすべて拾い、
+    末尾の数値（task_id）をリストとして返す。
+    """
     url = f"{BASE_URL}/contests/{contest_id}"
     try:
         html = fetch_url_html(url)
     except Exception as e:
-        print(f"[Error] {contest_id} ページ取得失敗→ {e}")
+        print(f"[Error] {contest_id} ページ取得失敗 → {e}")
         return []
 
     soup = BeautifulSoup(html, "html.parser")
@@ -164,12 +220,18 @@ def fetch_task_ids(contest_id: str) -> list[str]:
         marker = f"/contests/{contest_id}/tasks/"
         if marker in href:
             parts = href.strip().rstrip("/").split("/")
+            # .../contests/{contest_id}/tasks/{task_id} 形式を探す
             if len(parts) >= 2 and parts[-2] == "tasks" and parts[-1].isdigit():
                 ids.add(parts[-1])
     return sorted(ids, key=lambda x: int(x))
 
 
 def HtmlKatex(html: str) -> str:
+    """
+    すでにレンダリング済み KaTeX が埋め込まれている HTML から、
+    KaTeX の <annotation encoding="application/x-tex">…</annotation> 部分を
+    TeX ソース ($...$) へ戻す処理。翻訳前準備用。
+    """
     soup = BeautifulSoup(html, "html.parser")
     for katex in soup.find_all(class_="katex"):
         tex = katex.find("annotation", {"encoding": "application/x-tex"})
@@ -179,6 +241,10 @@ def HtmlKatex(html: str) -> str:
 
 
 def ask_gpt(question: str, model: str, term: str) -> str:
+    """
+    OpenAI ChatCompletion API を呼び出し、
+    HTML 形式の KaTeX + 日本語文章を「 target language 」に翻訳させる。
+    """
     try:
         resp = openai.ChatCompletion.create(
             model=model,
@@ -205,12 +271,19 @@ def ask_gpt(question: str, model: str, term: str) -> str:
 
 
 def translate_html_for_lang(jp_html: str, term: str, target_lang: str) -> str:
+    """
+    日本語の HTML (KaTeX 埋め込み) を GPT に投げて target_lang に翻訳させる。
+    """
     latex_ready = HtmlKatex(jp_html)
     translated = ask_gpt(latex_ready, GPT_MODEL, term)
     return translated
 
 
 def load_languages_list() -> list[str]:
+    """
+    languages/config.json を読み込み、翻訳対象リストを返す。
+    「en」は必ず先頭に置く。
+    """
     if not LANG_CONFIG_PATH.exists():
         print(f"[Error] {LANG_CONFIG_PATH} が見つかりません。")
         sys.exit(1)
@@ -225,7 +298,12 @@ def load_languages_list() -> list[str]:
     return ordered
 
 
-def save_jp_problem(contest_id: str, task_id: str) -> Path | None:
+def save_jp_problem(contest_id: str, task_id: str, page: Page) -> Path | None:
+    """
+    開催中コンテストの task ページから <div id="problem_content"> を取得し、
+    languages/ja/contests/{contest_id}/tasks/{task_id}.html に保存する。
+    同じファイルが存在すればスキップ。
+    """
     jp_folder = OUTPUT_ROOT / "ja" / "contests" / contest_id / "tasks"
     jp_folder.mkdir(parents=True, exist_ok=True)
 
@@ -236,7 +314,7 @@ def save_jp_problem(contest_id: str, task_id: str) -> Path | None:
 
     url = f"{BASE_URL}/contests/{contest_id}/tasks/{task_id}"
     print(f"[Fetch JP] {url} → extracting problem_content …")
-    inner_html = extract_div_innerhtml_with_playwright(url, div_id="problem_content")
+    inner_html = extract_div_innerhtml_with_playwright(page, url, div_id="problem_content")
     if not inner_html.strip():
         print(f"[Warning] {contest_id}/{task_id} の problem_content が空、または取得失敗")
         return None
@@ -250,7 +328,12 @@ def save_translated_html(contest_id: str,
                          task_id: str,
                          lang: str,
                          term: str,
-                         jp_filepath: Path):
+                         jp_filepath: Path,
+                         page: Page):
+    """
+    日本語版 HTML (jp_filepath) を読み込み、
+    target lang へ翻訳 → ファイル保存 → KaTeX レンダリング → 数式中央寄せ
+    """
     out_folder = OUTPUT_ROOT / lang / "contests" / contest_id / "tasks"
     out_folder.mkdir(parents=True, exist_ok=True)
 
@@ -269,11 +352,17 @@ def save_translated_html(contest_id: str,
     out_path.write_text(translated_html, encoding="utf-8")
     print(f"[Saved {lang}] {out_path} (bytes={len(translated_html)})")
 
-    render_html_with_playwright(out_path)
+    # KaTeX レンダリング
+    render_html_with_playwright(page, out_path)
+    # 数式中央寄せ処理
     change_problem_display(contest_id, task_id, lang)
 
 
 def change_problem_display(contest_id: str, task_id: str, lang: str = "en"):
+    """
+    出力された HTML に含まれる <span class="katex-display"> を <div style="text-align:center;">
+    でラップし、数式を中央寄せにする。
+    """
     file_path = OUTPUT_ROOT / lang / "contests" / contest_id / "tasks" / f"{task_id}.html"
     if not file_path.exists():
         print(f"[Error] {file_path} が存在しません。")
@@ -289,68 +378,141 @@ def change_problem_display(contest_id: str, task_id: str, lang: str = "en"):
     print(f"[Wrapped display] {file_path} の <span class=\"katex-display\"> を中央寄せに変更")
 
 
-def list_problem_files(contest_id: str) -> list[str]:
-    folder = OUTPUT_ROOT / "ja" / "contests" / contest_id / "tasks"
-    y_list: list[str] = []
-    if folder.exists() and folder.is_dir():
-        for fname in os.listdir(folder):
-            if fname.endswith(".html"):
-                y_list.append(fname[:-5])
-    return y_list
-
-
 def check_existence_problem(contest_id: str, task_id: str, lang: str = "en") -> bool:
+    """
+    languages/{lang}/contests/{contest_id}/tasks/{task_id}.html の有無をチェック。
+    """
     return (OUTPUT_ROOT / lang / "contests" / contest_id / "tasks" / f"{task_id}.html").exists()
 
 
+# ───────────────────────────────────────────────────────────
+# 4) ======================== main ========================
+# ───────────────────────────────────────────────────────────
+
 def main():
-    try:
-        home_html = fetch_url_html(HOMEPAGE_URL)
-    except Exception as e:
-        print(f"[Error] トップページ取得に失敗: {e}")
-        sys.exit(1)
+    """
+    OMC の現在開催中コンテストを検出し、
+    1) 各タスク (問題文) の日本語版を取得 → 英語翻訳 → 他言語翻訳
+    2) コンテストページから「Contest Duration (分)」を取得
+    3) 取得した contest_id と duration_min (分) を JSON 形式で標準出力する
+    """
+    # Playwright を使ってヘッドレスブラウザを起動し、ログイン処理を行う
+    with sync_playwright() as p:
+        print("→ Headless Chromium を起動します")
+        browser: Browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
 
-    latest_contest = find_latest_ended_contest(home_html)
-    if latest_contest is None:
-        print("最新の終了済コンテストが見つかりませんでした。終了します。")
-        return
+        # 1) OMC にログイン
+        success = login_omc_with_playwright(page)
+        if not success:
+            print("[Error] ログインに失敗したため、処理を終了します。")
+            browser.close()
+            sys.exit(1)
 
-    print(f"最新の終了済コンテスト ID = {latest_contest}")
+        # 2) トップページを取得して「開催中コンテスト ID」を抽出
+        print("→ 開催中コンテストを探すため、トップページを取得します")
+        page.goto(HOMEPAGE_URL, wait_until="networkidle")
+        home_html = page.content()
+        current_contest = find_current_contest(home_html)
+        if current_contest is None:
+            print("[Info] 開催中のコンテストが見つかりませんでした。終了します。")
+            browser.close()
+            sys.exit(0)
+        print(f"→ 開催中コンテスト ID = {current_contest}")
 
-    task_ids = fetch_task_ids(latest_contest)
-    if not task_ids:
-        print(f"[Warning] {latest_contest} にタスクが 0 件です。終了します。")
-        return
+        # 3) 各タスク ID を取得
+        task_ids = fetch_task_ids(current_contest)
+        if not task_ids:
+            print(f"[Warning] コンテスト {current_contest} にタスクが見つかりません。終了します。")
+            browser.close()
+            sys.exit(0)
+        print(f"→ {current_contest} のタスク一覧 = {task_ids}")
 
-    print(f"{latest_contest} のタスク一覧 = {task_ids}")
+        # 4) 翻訳対象言語リストを読み込む
+        languages = load_languages_list()  # 例: ["en", "fr", "de", ...]
+        print(f"→ 翻訳対象言語: {languages}")
 
-    languages = load_languages_list()
-    print(f"翻訳対象言語リスト = {languages}")
+        # 5) 各タスクについて
+        #    (A) save_jp_problem: <div id="problem_content"> を取得して languages/ja/.../tasks/{task_id}.html に保存
+        #    (B) save_translated_html: 英語 (en) 翻訳 → 他言語翻訳
+        en_jp_map: dict[str, Path] = {}
+        for tid in task_ids:
+            jp_path = save_jp_problem(current_contest, tid, page)
+            if jp_path is None:
+                continue
 
-    en_jp_map: dict[str, Path] = {}
+            # --- 英語翻訳 (lang="en") ---
+            if not check_existence_problem(current_contest, tid, lang="en"):
+                save_translated_html(
+                    contest_id=current_contest,
+                    task_id=tid,
+                    lang="en",
+                    term="task",
+                    jp_filepath=jp_path,
+                    page=page
+                )
+            else:
+                print(f"[Skip EN] {current_contest}/{tid} はすでに英語翻訳済みです。")
+            en_jp_map[tid] = jp_path
 
-    for tid in task_ids:
-        jp_path = save_jp_problem(latest_contest, tid)
-        if jp_path is None:
-            continue
+        # 6) 残りの言語を順次翻訳
+        remaining_langs = [l for l in languages if l != "en"]
+        if remaining_langs:
+            print(f"→ 英語翻訳完了 → 他言語 ({remaining_langs}) を順に処理します")
+            for lang in remaining_langs:
+                for tid, jp_path in en_jp_map.items():
+                    if not check_existence_problem(current_contest, tid, lang=lang):
+                        save_translated_html(
+                            contest_id=current_contest,
+                            task_id=tid,
+                            lang=lang,
+                            term="task",
+                            jp_filepath=jp_path,
+                            page=page
+                        )
+                    else:
+                        print(f"[Skip {lang}] {current_contest}/{tid} はすでに {lang} 翻訳済みです。")
 
-        if not check_existence_problem(latest_contest, tid, lang="en"):
-            save_translated_html(latest_contest, tid, lang="en", term="task", jp_filepath=jp_path)
-        else:
-            print(f"[Skip EN] {latest_contest}/{tid} は既に EN 翻訳済みです。")
-        en_jp_map[tid] = jp_path
+        print("→ すべてのタスク翻訳処理が完了しました。")
 
-    remaining_langs = [l for l in languages if l != "en"]
-    if remaining_langs:
-        print(f"EN 翻訳完了 → 残り言語を順番に処理します: {remaining_langs}")
-        for lang in remaining_langs:
-            for tid, jp_path in en_jp_map.items():
-                if not check_existence_problem(latest_contest, tid, lang=lang):
-                    save_translated_html(latest_contest, tid, lang=lang, term="task", jp_filepath=jp_path)
-                else:
-                    print(f"[Skip {lang}] {latest_contest}/{tid} は既に {lang} 翻訳済みです。")
+        # 7) コンテストページから「Contest Duration (分)」をパース
+        try:
+            contest_url = f"{BASE_URL}/contests/{current_contest}"
+            print(f"→ Contest ページから duration を取得: {contest_url}")
+            html_contest = fetch_url_html(contest_url)
+            soup2 = BeautifulSoup(html_contest, "html.parser")
 
-    print("すべてのタスク翻訳処理が完了しました。")
+            duration_min = None
+            # <p class="list-group-item-heading">100 分</p>
+            # <p class="list-group-item-text">Contest Duration</p> という構造を探す
+            for p_tag in soup2.find_all("p", class_="list-group-item-heading"):
+                text = p_tag.get_text(strip=True)
+                if text.endswith("分"):
+                    sibling = p_tag.find_next_sibling("p", class_="list-group-item-text")
+                    if sibling and "Contest Duration" in sibling.get_text():
+                        digits = "".join(filter(str.isdigit, text))
+                        if digits.isdigit():
+                            duration_min = int(digits)
+                            break
+
+            if duration_min is None:
+                print("[Warning] duration_min をパースできませんでした。デフォルト 60 分を設定します。")
+                duration_min = 60
+            else:
+                print(f"→ 取得した Contest Duration = {duration_min} 分")
+
+        except Exception as e:
+            print(f"[Warning] duration_min の取得中に例外発生: {e}")
+            duration_min = 60
+
+        # 8) JSON 形式で contest_id と duration_min を stdout 出力
+        result = {
+            "contest_id": current_contest,
+            "duration_min": duration_min
+        }
+        print(json.dumps(result, ensure_ascii=False))
+        browser.close()
 
 
 if __name__ == "__main__":

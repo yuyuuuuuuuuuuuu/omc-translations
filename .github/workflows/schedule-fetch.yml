@@ -1,26 +1,34 @@
-name: Fetch & Translate Latest Ended Contest Tasks
+name: OMC Fetch & Translate (Tasks → Editorial)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1) スケジュール：JST 21:00 の「1 分前」（JST 20:59）に起動
+#    GitHub Actions の cron は UTC ベースなので、JST-9h → UTC に直す。
+#    JST 20:59 → UTC 11:59 → cron: '59 11 * * *'
+# ──────────────────────────────────────────────────────────────────────────────
+on:
+  schedule:
+    - cron: '59 11 * * *'  # 毎日 20:59 JST (= UTC 11:59) にワークフローをキック
+  workflow_dispatch:
 
 permissions:
   contents: write
 
-on:
-  schedule:
-    # 毎日 JST 21:00 (= UTC 12:00)
-    - cron: '0 12 * * *'
-  workflow_dispatch:
-
 jobs:
-  run-fetch:
+  fetch_and_wait:
     runs-on: ubuntu-latest
+    timeout-minutes: 360  # 最大 6 時間実行を許容（コンテスト 150 分 + buffer + 翻訳などを考慮）
 
     steps:
+      # ────────────────────────────────────────────────────────────
+      # ステップ①：Checkout & Python 準備
+      # ────────────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
 
-      - name: Setup Python
+      - name: Setup Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
@@ -30,24 +38,99 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install Playwright browsers
+      - name: Install Playwright Browsers
         run: |
           python -m playwright install chromium
 
-      - name: Run fetch_and_translate.py
-        # ← ここでシークレットを環境変数として渡す
+      # ────────────────────────────────────────────────────────────
+      # ステップ②：「JST 21:00（UTC 12:00）になるまで待機」
+      # ────────────────────────────────────────────────────────────
+      - name: Wait until JST 21:00 (UTC 12:00)
+        shell: bash
+        run: |
+          echo "=== 現在の UTC 時刻: $(date -u '+%Y-%m-%d %H:%M:%S') ==="
+          # UTC 12:00:00 は JST 21:00:00 と同義
+          TARGET_UTC=$(date -u -d '12:00:00' +%s)
+          while true; do
+            NOW_UTC=$(date -u +%s)
+            if [ "$NOW_UTC" -ge "$TARGET_UTC" ]; then
+              break
+            fi
+            sleep 1
+          done
+          echo "=== JST 21:00 (UTC 12:00) 到達！次ステップに進みます ==="
+
+      # ────────────────────────────────────────────────────────────
+      # ステップ③：コンテスト開始 (9 時ちょうど) に tasks を取得＆翻訳
+      #             → 同時に「CONTEST_ID」「DURATION_MIN」を出力してもらう
+      # ────────────────────────────────────────────────────────────
+      - name: Run fetch_and_translate.py (Tasks) → Extract CONTEST_ID & DURATION
+        id: fetch_tasks
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OMC_USERNAME:       ${{ secrets.OMC_USERNAME }}
+          OMC_PASSWORD:       ${{ secrets.OMC_PASSWORD }}
+        shell: bash
         run: |
-          python scripts/fetch_and_translate.py
+          # fetch_and_translate.py を実行しつつ、
+          # stdout に JSON 形式で CONTEST_ID と DURATION_MIN を出力してもらう
+          #
+          # 例: {"contest_id":"omc251","duration_min":100}
+          #
+          RESULT_JSON=$(python3 scripts/fetch_and_translate.py)
+          echo "Fetch & Translate Tasks 結果: $RESULT_JSON"
+          # JSON を解析して output にセット
+          CONTEST_ID=$(echo "$RESULT_JSON" | grep -Po '(?<="contest_id":")[^"]+')
+          DURATION_MIN=$(echo "$RESULT_JSON" | grep -Po '(?<="duration_min":)\d+')
+          echo "::set-output name=contest_id::$CONTEST_ID"
+          echo "::set-output name=duration_min::$DURATION_MIN"
 
-      - name: Commit & push changes
+      # ────────────────────────────────────────────────────────────
+      # ステップ④：コンテスト終了まで待機（duration_min 分 + 30 秒 buffer）
+      # ────────────────────────────────────────────────────────────
+      - name: Wait until Contest Ended (+30秒バッファ)
+        id: wait_editorial
+        shell: bash
         run: |
-          git config user.name "github-actions[bot]"
+          CONTEST_ID="${{ steps.fetch_tasks.outputs.contest_id }}"
+          D_MIN="${{ steps.fetch_tasks.outputs.duration_min }}"
+          if [ -z "$D_MIN" ] || [ "$D_MIN" -le 0 ]; then
+            echo "::warning::duration_min が正しくありません。デフォルトで 60 分を使用します"
+            D_MIN=60
+          fi
+          # 秒数計算
+          D_SEC=$(( D_MIN * 60 + 30 ))
+          echo "===> コンテスト ${CONTEST_ID} は ${D_MIN} 分 + 30 秒 (= ${D_SEC} 秒) 後に終了想定"
+          sleep "${D_SEC}"
+          echo "===> 約 ${D_MIN} 分後 (編集タイミング) に到達しました"
+
+      # ────────────────────────────────────────────────────────────
+      # ステップ⑤：fetch_editorial.py を実行 → 解説取得・翻訳
+      # ────────────────────────────────────────────────────────────
+      - name: Run fetch_editorial.py (Editorial)
+        id: fetch_editorial
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OMC_USERNAME:       ${{ secrets.OMC_USERNAME }}
+          OMC_PASSWORD:       ${{ secrets.OMC_PASSWORD }}
+        shell: bash
+        run: |
+          CONTEST_ID="${{ steps.fetch_tasks.outputs.contest_id }}"
+          echo ">>> Starting fetch_editorial.py for contest ${CONTEST_ID}"
+          python3 scripts/fetch_editorial.py
+
+      # ────────────────────────────────────────────────────────────
+      # ステップ⑥：Git へ Commit & Push（Tasks＋Editorial の両方まとめて一度コミット）
+      # ────────────────────────────────────────────────────────────
+      - name: Commit & Push all changes
+        shell: bash
+        run: |
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 何らかのファイル更新があったらコミット／プッシュ
           if [[ -n "$(git status --porcelain)" ]]; then
-            git add languages/*
-            git commit -m "Auto-fetch & translate: latest ended contest tasks & editorials"
+            git add languages/
+            git commit -m "Auto: fetch & translate tasks and editorial for contest ${{ steps.fetch_tasks.outputs.contest_id }}"
             git push origin HEAD:main
           else
             echo "No changes to commit"

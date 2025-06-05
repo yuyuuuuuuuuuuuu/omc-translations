@@ -1,0 +1,489 @@
+<!DOCTYPE html><html lang="ja" dir="ltr"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OnlineMathContest | For All Solvers</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="msapplication-TileColor" content="#ffffff">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:400,700" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Volkhov:400i" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800" rel="stylesheet">
+  <link rel="stylesheet" href="/fonts/roboto/roboto.css">
+  <link rel="stylesheet" href="/fonts/montserrat/montserrat.css">
+  <link rel="stylesheet" href="/fonts/roboto-slab/roboto-slab.css">
+  <link rel="stylesheet" href="/fonts/mdi-wxss/MDI.css">
+  <link rel="stylesheet" href="/fonts/devicon/devicon.min.css?version=1.0.3">
+  <link rel="stylesheet" href="/fonts/langicon/langicon.css?version=1.0.2">
+  <link rel="stylesheet" href="/fonts/socialicon/socialicon.css?version=1.0.1">
+  <link rel="stylesheet" href="/css/app.css?id=b8d85c0a80b0576aadc0">
+  <link id="color-scheme" href="/assets/css/colors/default.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
+  <style>
+    .checkbox-marked-circle {
+    color: #1DA1F2;
+    }
+  </style>
+  <!-- The loading of KaTeX is deferred to speed up page rendering -->
+  <script src="https://pagead2.googlesyndication.com/pagead/managed/js/adsense/m202506050101/show_ads_impl.js?bust=31092882"></script><script async="" type="text/javascript" src="https://cmp.quantcast.com/choice/6Fv0cGNfc_bw8/www.themoneytizer.com/choice.js"></script><script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.js" integrity="sha384-g7c+Jr9ZivxKLnZTDUhnkOnsh30B4H0rpLUpJ4jAIKs4fnJI+sEnkvrMWph2EDg4" crossorigin="anonymous">
+  </script>
+  <!-- To automatically render math in text elements, include the auto-render extension: -->
+  <script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/contrib/auto-render.min.js" integrity="sha384-mll67QQFJfxn0IYznZYonOWZ644AWYC+Pt2cHqMaRhXVrursRwvLnLaebdGIlYNa" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+  <script>
+    $(document).ready(function() {
+      renderMathInElement(document.body, {
+        delimiters: [{
+          left: "[[",
+          right: "]]",
+          display: true
+        }, {
+          left: "$",
+          right: "$",
+          display: false
+        }]
+      })
+    });
+  </script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [{
+            left: "$$",
+            right: "$$",
+            display: true
+          },
+          {
+            left: "$",
+            right: "$",
+            display: false
+          }
+        ],
+      });
+    });
+  </script>
+  <!-- Add OGP -->
+  <meta property="og:description" content="OnlineMathContestは世界中の数学好きが競い合うオンラインの数学コンテストサイトです．数学で世界と戦ってみませんか？">
+  <meta property="og:title" content="OnlineMathContest | For All Solvers">
+  <meta property="og:image" content="https://onlinemathcontest.com/omc-logo-initial.jpg">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://onlinemathcontest.com">
+  <!-- Add Twitter Card-->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:site" content="@OMathC_official">
+  <meta name="”twitter:domain”" content="”https://onlinemathcontest.com”">
+  <meta name="twitter:title" content="OnlineMathContest">
+  <meta name="twitter:description" content="OnlineMathContestは世界中の数学好きが競い合うオンラインの数学コンテストサイトです. 数学で世界と戦ってみませんか？">
+  <meta name="twitter:image" content="https://onlinemathcontest.com/omc-logo-initial.jpg">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-Q2BLT4ERTN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+    gtag('js', new Date());
+    gtag('config', "G-Q2BLT4ERTN");
+  </script>
+  <!--Google Adsense-->
+  <script async="" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9383364844196884" crossorigin="anonymous" data-checked-head="true"></script>
+    <!-- CSRF Token -->
+  <meta name="csrf-token" content="x7jvRXLZORlEwAYwnlXbjrkn2CCvPtrzKwOF8Awl">
+    
+  <!-- Quantcast Choice. Consent Manager Tag v2.0 (for TCF 2.0) -->
+  <script type="text/javascript" async="true">
+    (function() {
+    var host = 'www.themoneytizer.com';
+    var element = document.createElement('script');
+    var firstScript = document.getElementsByTagName('script')[0];
+    var url = 'https://cmp.quantcast.com'
+      .concat('/choice/', '6Fv0cGNfc_bw8', '/', host, '/choice.js');
+    var uspTries = 0;
+    var uspTriesLimit = 3;
+    element.async = true;
+    element.type = 'text/javascript';
+    element.src = url;
+  
+    firstScript.parentNode.insertBefore(element, firstScript);
+  
+    function makeStub() {
+      var TCF_LOCATOR_NAME = '__tcfapiLocator';
+      var queue = [];
+      var win = window;
+      var cmpFrame;
+  
+      function addFrame() {
+        var doc = win.document;
+        var otherCMP = !!(win.frames[TCF_LOCATOR_NAME]);
+  
+        if (!otherCMP) {
+          if (doc.body) {
+            var iframe = doc.createElement('iframe');
+  
+            iframe.style.cssText = 'display:none';
+            iframe.name = TCF_LOCATOR_NAME;
+            doc.body.appendChild(iframe);
+          } else {
+            setTimeout(addFrame, 5);
+          }
+        }
+        return !otherCMP;
+      }
+  
+      function tcfAPIHandler() {
+        var gdprApplies;
+        var args = arguments;
+  
+        if (!args.length) {
+          return queue;
+        } else if (args[0] === 'setGdprApplies') {
+          if (
+            args.length > 3 &&
+            args[2] === 2 &&
+            typeof args[3] === 'boolean'
+          ) {
+            gdprApplies = args[3];
+            if (typeof args[2] === 'function') {
+              args[2]('set', true);
+            }
+          }
+        } else if (args[0] === 'ping') {
+          var retr = {
+            gdprApplies: gdprApplies,
+            cmpLoaded: false,
+            cmpStatus: 'stub'
+          };
+  
+          if (typeof args[2] === 'function') {
+            args[2](retr);
+          }
+        } else {
+          if(args[0] === 'init' && typeof args[3] === 'object') {
+            args[3] = { ...args[3], tag_version: 'V2' };
+          }
+          queue.push(args);
+        }
+      }
+  
+      function postMessageEventHandler(event) {
+        var msgIsString = typeof event.data === 'string';
+        var json = {};
+  
+        try {
+          if (msgIsString) {
+            json = JSON.parse(event.data);
+          } else {
+            json = event.data;
+          }
+        } catch (ignore) {}
+  
+        var payload = json.__tcfapiCall;
+  
+        if (payload) {
+          window.__tcfapi(
+            payload.command,
+            payload.version,
+            function(retValue, success) {
+              var returnMsg = {
+                __tcfapiReturn: {
+                  returnValue: retValue,
+                  success: success,
+                  callId: payload.callId
+                }
+              };
+              if (msgIsString) {
+                returnMsg = JSON.stringify(returnMsg);
+              }
+              if (event && event.source && event.source.postMessage) {
+                event.source.postMessage(returnMsg, '*');
+              }
+            },
+            payload.parameter
+          );
+        }
+      }
+  
+      while (win) {
+        try {
+          if (win.frames[TCF_LOCATOR_NAME]) {
+            cmpFrame = win;
+            break;
+          }
+        } catch (ignore) {}
+  
+        if (win === window.top) {
+          break;
+        }
+        win = win.parent;
+      }
+      if (!cmpFrame) {
+        addFrame();
+        win.__tcfapi = tcfAPIHandler;
+        win.addEventListener('message', postMessageEventHandler, false);
+      }
+    };
+  
+    makeStub();
+  
+    var uspStubFunction = function() {
+      var arg = arguments;
+      if (typeof window.__uspapi !== uspStubFunction) {
+        setTimeout(function() {
+          if (typeof window.__uspapi !== 'undefined') {
+            window.__uspapi.apply(window.__uspapi, arg);
+          }
+        }, 500);
+      }
+    };
+  
+    var checkIfUspIsReady = function() {
+      uspTries++;
+      if (window.__uspapi === uspStubFunction && uspTries < uspTriesLimit) {
+        console.warn('USP is not accessible');
+      } else {
+        clearInterval(uspInterval);
+      }
+    };
+  
+    if (typeof window.__uspapi === 'undefined') {
+      window.__uspapi = uspStubFunction;
+      var uspInterval = setInterval(checkIfUspIsReady, 6000);
+    }
+  })();
+  </script>
+  <!-- End Quantcast Choice. Consent Manager Tag v2.0 (for TCF 2.0) -->
+<meta http-equiv="origin-trial" content="AlK2UR5SkAlj8jjdEc9p3F3xuFYlF6LYjAML3EOqw1g26eCwWPjdmecULvBH5MVPoqKYrOfPhYVL71xAXI1IBQoAAAB8eyJvcmlnaW4iOiJodHRwczovL2RvdWJsZWNsaWNrLm5ldDo0NDMiLCJmZWF0dXJlIjoiV2ViVmlld1hSZXF1ZXN0ZWRXaXRoRGVwcmVjYXRpb24iLCJleHBpcnkiOjE3NTgwNjcxOTksImlzU3ViZG9tYWluIjp0cnVlfQ=="><meta http-equiv="origin-trial" content="Amm8/NmvvQfhwCib6I7ZsmUxiSCfOxWxHayJwyU1r3gRIItzr7bNQid6O8ZYaE1GSQTa69WwhPC9flq/oYkRBwsAAACCeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXN5bmRpY2F0aW9uLmNvbTo0NDMiLCJmZWF0dXJlIjoiV2ViVmlld1hSZXF1ZXN0ZWRXaXRoRGVwcmVjYXRpb24iLCJleHBpcnkiOjE3NTgwNjcxOTksImlzU3ViZG9tYWluIjp0cnVlfQ=="><meta http-equiv="origin-trial" content="A9wSqI5i0iwGdf6L1CERNdmsTPgVu44ewj8QxTBYgsv1LCPUVF7YmWOvTappqB1139jAymxUW/RO8zmMqo4zlAAAAACNeyJvcmlnaW4iOiJodHRwczovL2RvdWJsZWNsaWNrLm5ldDo0NDMiLCJmZWF0dXJlIjoiRmxlZGdlQmlkZGluZ0FuZEF1Y3Rpb25TZXJ2ZXIiLCJleHBpcnkiOjE3MzY4MTI4MDAsImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="A+d7vJfYtay4OUbdtRPZA3y7bKQLsxaMEPmxgfhBGqKXNrdkCQeJlUwqa6EBbSfjwFtJWTrWIioXeMW+y8bWAgQAAACTeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXN5bmRpY2F0aW9uLmNvbTo0NDMiLCJmZWF0dXJlIjoiRmxlZGdlQmlkZGluZ0FuZEF1Y3Rpb25TZXJ2ZXIiLCJleHBpcnkiOjE3MzY4MTI4MDAsImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"></head>
+
+<body data-spy="scroll" data-target=".onpage-navigation" data-offset="60">
+  <main>
+        <div class="mundb-background-container">
+      <img src="">
+    </div>
+    <div id="nav-container" style="margin-bottom:30px;position:sticky;top:0;z-index:899;flex-shrink: 0;flex-grow: 0;">
+      <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="https://onlinemathcontest.com">
+          <img src="/omc-logo.png" height="25">
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="https://onlinemathcontest.com">HOME<span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://onlinemathcontest.com/contests/all">CONTESTS</a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-expanded="false">RANKING</a>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" href="https://onlinemathcontest.com/ranking">レーティング</a>
+                <a class="dropdown-item" href="https://onlinemathcontest.com/annual-ranking">年間ランキング</a>
+              </div>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://onlinemathcontest.com/announcements">ANNOUNCE</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://onlinemathcontest.com/problems">PROBLEMS</a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-expanded="false">RULES</a>
+              <div class="dropdown-menu">
+                <a class="dropdown-item" href="https://onlinemathcontest.com/rules">ルール</a>
+                <a class="dropdown-item" href="https://onlinemathcontest.com/rules/writer-tester">Writer/Testerについて</a>
+                <a class="dropdown-item" href="https://onlinemathcontest.com/faq">よくある質問</a>
+              </div>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://onlinemathcontest.com/announcements/show/33">SUPPORT US</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://shop.onlinemathcontest.com/">SHOP</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav mundb-nav-right">
+            <li class="nav-item mundb-no-shrink">
+                            <a class="nav-link" href="https://onlinemathcontest.com/login">Login</a>
+                          </li>
+          </ul>
+        </div>
+      </nav>
+          </div>
+    <title>
+             | For All Solvers
+    </title>
+          <main>
+            <style>
+  form .form-group:last-of-type {
+    margin-bottom: 0;
+  }
+
+  .alert>p {
+    margin-bottom: 0;
+  }
+
+  .card {
+    margin-bottom: 20vh;
+    overflow: hidden;
+    display: block;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 30px;
+    border-radius: 4px;
+    transition: .2s ease-out .0s;
+    color: #7a8e97;
+    background: #fff;
+    position: relative;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+  }
+
+  .card .card-header {
+    padding: 0;
+  }
+
+  .card .card-header>ul {
+    margin: 0;
+  }
+
+  .card .card-header>ul .nav-link {
+    padding: 1rem;
+    border: none !important;
+  }
+
+  .card .card-header .nav-tabs .nav-link.active {
+    color: #ff4081;
+  }
+
+  .nav-tabs-material .nav-tabs-indicator {
+    background-color: #ff4081;
+    bottom: -1px;
+    display: block;
+    width: 50%;
+    height: .15rem;
+    position: absolute;
+    transition: .2s ease-out .0s;
+  }
+
+  #accountTab {
+    position: relative;
+  }
+
+  .card-footer {
+    border: none;
+  }
+
+  form {
+    margin-bottom: 0;
+  }
+
+  input {
+    box-shadow: none !important;
+  }
+
+  label[for="agreement"] {
+    display: inline-block;
+  }
+
+  .card-bottom {
+    background: linear-gradient(0deg, #f4f4f4, #efefef);
+    padding: 10px;
+  }
+
+  .socialite-section a {
+    color: inherit;
+    text-decoration: none;
+    margin: 0 0.5rem;
+  }
+
+  .socialite-section button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .socialite-section button i {
+    font-size: 2rem;
+  }
+</style>
+<div class="container mundb-standard-container">
+  <div class="row justify-content-sm-center">
+    <div class="col-sm-12 col-md-8 col-lg-6">
+      <div class="text-center" style="margin-top:10vh;margin-bottom:20px;">
+        <h1 style="padding:20px;display:inline-block;">OnlineMathContest</h1>
+        <p></p>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <ul class="nav nav-tabs card-header-tabs nav-justified nav-tabs-material" id="accountTab" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link active" id="login-tab">ログイン</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link " id="register-tab" href="https://onlinemathcontest.com/register">新規登録</a>
+            </li>
+            <div class="nav-tabs-indicator" id="nav-tabs-indicator" style="left: 0px;"></div>
+          </ul>
+        </div>
+        <div class="tab-content" id="accountTabContent">
+          <div class="tab-pane fade show active" id="login" role="tabpanel" aria-labelledby="login-tab">
+            <form class="needs-validation" method="POST" action="https://onlinemathcontest.com/login">
+              <input type="hidden" name="_token" value="x7jvRXLZORlEwAYwnlXbjrkn2CCvPtrzKwOF8Awl">              <div class="card-body">
+                <div class="form-group">
+                  <label for="display_name" class="bmd-label-floating">Username</label>
+                  <input id="display_name" type="text" class="form-control " name="display_name" value="" required="" autocomplete="display_name" autofocus="" placeholder="Username">
+                                  </div>
+                <div class="form-group">
+                  <label for="password" class="bmd-label-floating">Password</label>
+                  <input id="password" type="password" class="form-control " name="password" required="" autocomplete="current-password" placeholder="Password">
+                                  </div>
+                <div class="form-group">
+                  <button type="submit" class="btn btn-primary">ログイン</button>
+                </div>
+                                <a class="btn btn-link" href="https://onlinemathcontest.com/password/reset">パスワードをお忘れですか?</a>
+                              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    </main>
+    <script src="/js/app.js?id=c15933642340aace267d"></script>
+         <footer class="d-print-none bg-dark center-on-small-only" style="flex-shrink: 0;flex-grow: 0">
+      <div class="mundb-footer text-light">
+        <div class="container">
+          <div class="row">
+            <div class="col-md-4">
+              <h5 class="cm-footer-title mb-4 mt-3 font-bold">OnlineMathContest</h5>
+              <p>OnlineMathContestは世界中のSolverが参加する数学コンテストサイトです.</p>
+            </div>
+            <hr class="clearfix w-100 d-md-none">
+            <div class="col-md-4 mx-auto">
+              <h5 class="title mb-4 mt-3 font-bold">Pages</h5>
+              <p class="mb-1"><a href="https://onlinemathcontest.com">ホーム</a></p>
+              <p class="mb-1"><a href="https://onlinemathcontest.com/contests/all">コンテスト</a></p>
+              <p class="mb-1"><a href="https://onlinemathcontest.com/announcements">お知らせ</a></p>
+              <p class="mb-1"><a href="https://onlinemathcontest.com/company">会社概要</a></p>
+            </div>
+            <hr class="clearfix w-100 d-md-none">
+            <div class="col-md-4 mx-auto">
+              <h5 class="title mb-4 mt-3 font-bold ">Support</h5>
+              <p class="mb-1">一般社団法人 OnlineMathContest</p>
+              <p class="mb-1"><i class="MDI email"></i>hello@onlinemathcontest.com</p>
+              <p class="mb-1"><a href="https://onlinemathcontest.com/privacy">プライバシーポリシー</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mundb-footer mundb-copyright">© 2020-2025, OnlineMathContest. </div>
+    </footer>
+  </main>
+
+
+<iframe name="__tcfapiLocator" style="display: none;"></iframe><ins class="adsbygoogle adsbygoogle-noablate" data-adsbygoogle-status="done" style="display: none !important;"><div id="aswift_0_host" style="border: none; height: 0px; width: 0px; margin: 0px; padding: 0px; position: relative; visibility: visible; background-color: transparent; display: inline-block;"></div></ins></body></html>
