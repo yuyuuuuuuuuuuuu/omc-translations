@@ -1,17 +1,13 @@
 # .github/workflows/schedule-fetch.yml
+name: Fetch & Translate Latest Ended Contest Tasks
 
-name: Fetch Latest Ended Contest Tasks & Editorial
-
-# ───────────────────────────────────────────────────────────
-# ここで権限を書き込み可能に指定
-# ───────────────────────────────────────────────────────────
 permissions:
   contents: write
 
 on:
   schedule:
-    # 毎日 04:30 UTC (= 13:30 JST)
-    - cron: '0 6 * * *'
+    # 毎日 JST 21:00 (= UTC 12:00)
+    - cron: '0 12 * * *'
   workflow_dispatch:
 
 jobs:
@@ -38,7 +34,7 @@ jobs:
 
       # ────────────────────────────────────────────────────
       # 3) 依存ライブラリをインストール
-      #    - requests, beautifulsoup4, playwright
+      #    - requests, beautifulsoup4, playwright, openai など
       # ────────────────────────────────────────────────────
       - name: Install dependencies
         run: |
@@ -55,9 +51,9 @@ jobs:
       # ────────────────────────────────────────────────────
       # 5) スクリプトを実行する
       # ────────────────────────────────────────────────────
-      - name: Run fetch_latest_ended.py
+      - name: Run fetch_and_translate.py
         run: |
-          python scripts/fetch_latest_ended.py
+          python scripts/fetch_and_translate.py
 
       # ────────────────────────────────────────────────────
       # 6) 変更を検知したらコミット & プッシュ
@@ -68,7 +64,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [[ -n "$(git status --porcelain)" ]]; then
             git add languages/ja/contests
-            git commit -m "Auto-fetch: latest ended contest tasks & editorials"
+            git commit -m "Auto-fetch & translate: latest ended contest tasks & editorials"
             git push origin HEAD:main
           else
             echo "No changes to commit"
