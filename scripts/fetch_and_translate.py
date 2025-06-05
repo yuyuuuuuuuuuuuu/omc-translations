@@ -454,12 +454,14 @@ def main():
             print(f"[Warning] duration_min の取得中に例外発生: {e}")
             duration_min = 60
 
-        # 8) contest_id と duration_min を JSON 形式で標準出力
+        # 8) contest_id と duration_min を、スペース無しの JSON 形式で標準出力
         result = {
             "contest_id": current_contest,
             "duration_min": duration_min
         }
-        print(json.dumps(result, ensure_ascii=False))
+        # separators=(',',':') を指定すると、出力が {"contest_id":"omc046","duration_min":80} のように空白なしになる
+        print(json.dumps(result, ensure_ascii=False, separators=(',',':')))
+
         browser.close()
 
 
