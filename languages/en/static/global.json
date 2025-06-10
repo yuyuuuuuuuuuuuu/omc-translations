@@ -1,0 +1,42 @@
+[
+    {
+      "paths": ["/", "/home"],
+      "dictionaries": ["global", "home"],
+      "selectors": ["header", "footer", ".contest-status"]
+    },
+    {
+      "paths": ["/contests/all"],
+      "dictionaries": ["global", "all-contests"],
+      "selectors": ["#allContestChart", "#contest-list"]
+    },
+    {
+      "paths": ["/ranking", "/ranking/annual"],
+      "dictionaries": ["global", "ranking"],
+      "selectors": ["h1", ".axis text", ".ranking-description"]
+    },
+    {
+      "paths": ["/problems"],
+      "dictionaries": ["global", "problems"],
+      "selectors": ["#main > p", ".problems-intro"]
+    },
+    {
+      "paths": ["/rules"],
+      "dictionaries": ["global", "rules"],
+      "selectors": ["#rules-content p"]
+    },
+    {
+      "paths": ["/contests/[^/]+$"],
+      "dictionaries": ["global", "contest"],
+      "selectors": ["h1", ".contest-info", "#rule-explanation p"]
+    },
+    {
+      "paths": ["/users/[^/]+"],
+      "dictionaries": ["global", "user"],
+      "selectors": ["h1", ".user-stats", ".user-bio"]
+    },
+    {
+      "paths": ["/contests/[^/]+/tasks/\\d+"],
+      "dictionaries": ["global", "contest"],
+      "selectors": ["header", ".task-info", ".task-nav"]
+    }
+  ]

@@ -2,7 +2,7 @@ name: OMC Fetch & Translate (Tasks → Editorial)
 
 on:
   schedule:
-    - cron: '58 11 * * *'  # 毎日 20:59 JST (= UTC11:59)
+    - cron: '01 11 * * *'  # 毎日 20:58 JST (= UTC11:58)
   workflow_dispatch:
 
 permissions:
@@ -64,7 +64,7 @@ jobs:
           echo "::set-output name=contest_id::$CONTEST_ID"
           echo "::set-output name=duration_min::$DURATION_MIN"
 
-          
+
       # ────────────────────────────────────────────────────────────
       # 【変更】 Step④：コンテスト開始 21:00 JST (UTC 12:00) を基準に duration_min 分後まで待機
       # ────────────────────────────────────────────────────────────
