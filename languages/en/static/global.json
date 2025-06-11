@@ -32,10 +32,10 @@
         "<a class=\"dropdown-item text-danger\" href=\"https://onlinemathcontest.com/logout\" onclick=\"event.preventDefault();document.getElementById('logout-form').submit();\"><i class=\"MDI exit-to-app text-danger\"></i>Log Out</a>",
                     
 
-    "OnlineMathContestは世界中のSolverが参加する数学コンテストサイトです.": "OnlineMathContest is a global math contest site.",
-    "ホーム": "Home",
-    "コンテスト": "Contests",
-    "お知らせ": "Announce",
-    "会社概要": "About us",
-    "プライバシーポリシー": "Privacy Policy"
+    "OnlineMathContestは世界中のSolverが参加する数学コンテストサイトです.": "OnlineMathContest is a mathematics contest platform where solvers from around the world participate.",
+    "<a href=\"https://onlinemathcontest.com\">ホーム</a>": "<a href=\"https://onlinemathcontest.com\">Home</a>",
+    "<a href=\"https://onlinemathcontest.com/contests/all\">コンテスト</a>": "<a href=\"https://onlinemathcontest.com/contests/all\">Contests</a>",
+    "<a href=\"https://onlinemathcontest.com/announcements\">お知らせ</a>": "<a href=\"https://onlinemathcontest.com/announcements\">Announcements</a>",
+    "<a href=\"https://onlinemathcontest.com/company\">会社概要</a>": "<a href=\"https://onlinemathcontest.com/company\">Company</a>",
+    "<a href=\"https://onlinemathcontest.com/privacy\">プライバシーポリシー</a>": "<a href=\"https://onlinemathcontest.com/privacy\">Privacy Policy</a>"
   }
