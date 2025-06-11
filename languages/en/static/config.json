@@ -6,5 +6,9 @@
     {
         "paths": ["/announcements"],
         "dictionaries": ["announce"]
+    },
+    {
+        "paths": ["/ranking"],
+        "dictionaries": ["ranking"]
     }
   ]
