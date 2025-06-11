@@ -1,5 +1,8 @@
 [
-    
+    {
+      "paths": ["/"],
+      "dictionaries": ["top", "global", "announce"]
+    },
     {
         "paths": ["/announcements"],
         "dictionaries": ["announce"]
