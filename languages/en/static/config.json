@@ -1,10 +1,14 @@
 [
     {
-      "paths": ["/"],
-      "dictionaries": ["top", "global", "announce"]
+        "paths": ["(?:/.*)?"],
+        "dictionaries": ["global"]
     },
     {
-        "paths": ["/announcements"],
+      "paths": ["/"],
+      "dictionaries": ["top", "announce"]
+    },
+    {
+        "paths": ["/announcements(?:/.*)?"],
         "dictionaries": ["announce"]
     },
     {
