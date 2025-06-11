@@ -1,8 +1,5 @@
 [
-    {
-        "paths": ["(?:/.*)?"],
-        "dictionaries": ["global"]
-    },
+    
     {
       "paths": ["/"],
       "dictionaries": ["top", "announce"]
@@ -14,5 +11,10 @@
     {
         "paths": ["/ranking"],
         "dictionaries": ["ranking"]
+    },
+
+    {
+        "paths": ["(?:/.*)?"],
+        "dictionaries": ["global"]
     }
   ]
