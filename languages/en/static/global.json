@@ -1,18 +1,36 @@
 {
-    "ホーム": "Home",
-    "レーティング": "RATING",
-    "年間ランキング": "ANNUAL-RANKING",
-    "ルール": "RULES",
-    "Writer/Testerについて": "About Writer/Tester",
-    "よくある質問": "FAQ",
+    
+    "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/ranking\">レーティング</a>":
+        "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/ranking\">Rating</a>",
+    "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/annual-ranking\">年間ランキング</a>":
+        "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/annual-ranking\">Annual Rankings</a>",
+    "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/rules\">ルール</a>":
+        "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/rules\">Rules</a>",
+    "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/rules/writer-tester\">Writer/Testerについて</a>":
+        "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/rules/writer-tester\">About Writers & Testers</a>",
+    "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/faq\">よくある質問</a>":
+        "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/faq\">FAQ</a>",
+            
 
-    "プロフィール設定": "Settings",
-    "パスワードの変更": "Change Password",
-    "ブックマーク": "Bookmarks",
-    "問題作成": "Create Problems",
-    "セット案作成": "Create Sets",
-    "ログアウト": "Log Out",
-    "ログイン": "Log In",
+        
+    "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/settings\"><i class=\"MDI settings\"></i>プロフィール設定</a>":
+        "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/settings\"><i class=\"MDI settings\"></i>Profile Settings</a>",
+        
+    "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/change_password\"><i class=\"MDI lock\"></i>パスワードの変更</a>":
+        "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/change_password\"><i class=\"MDI lock\"></i>Change Password</a>",
+        
+    "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/bookmarks\"><i class=\"MDI bookmark\"></i>ブックマーク</a>":
+        "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/bookmarks\"><i class=\"MDI bookmark\"></i>Bookmarks</a>",
+        
+    "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/posts\"><i class=\"MDI content-paste\"></i>問題作成</a>":
+        "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/posts\"><i class=\"MDI content-paste\"></i>Create Problems</a>",
+        
+    "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/sets\"><i class=\"MDI folder\"></i>セット案作成</a>":
+        "<a class=\"dropdown-item\" href=\"https://onlinemathcontest.com/sets\"><i class=\"MDI folder\"></i>Create Problem Sets</a>",
+        
+    "<a class=\"dropdown-item text-danger\" href=\"https://onlinemathcontest.com/logout\" onclick=\"event.preventDefault();document.getElementById('logout-form').submit();\"><i class=\"MDI exit-to-app text-danger\"></i>ログアウト</a>":
+        "<a class=\"dropdown-item text-danger\" href=\"https://onlinemathcontest.com/logout\" onclick=\"event.preventDefault();document.getElementById('logout-form').submit();\"><i class=\"MDI exit-to-app text-danger\"></i>Log Out</a>",
+                    
 
     "OnlineMathContestは世界中のSolverが参加する数学コンテストサイトです.": "OnlineMathContest is a global math contest site.",
     "ホーム": "Home",
