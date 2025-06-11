@@ -1,7 +1,10 @@
 [
     {
-      "paths": ["/", "/home"],
-      "dictionaries": ["global"],
-      "selectors": ["nav.navbar", "div.mundb-footer"]
+      "paths": ["/"],
+      "dictionaries": ["global", "top", "announce"]
+    },
+    {
+        "paths": ["/announcements"],
+        "dictionaries": ["announce"]
     }
   ]
