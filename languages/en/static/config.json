@@ -2,6 +2,6 @@
     {
       "paths": ["/", "/home"],
       "dictionaries": ["global"],
-      "selectors": ["header", "footer", ".contest-status"]
+      "selectors": ["nav.navbar", "div.mundb-footer"]
     }
   ]
