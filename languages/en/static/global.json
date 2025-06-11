@@ -3,13 +3,16 @@
     "レーティング": "RATING",
     "年間ランキング": "ANNUAL-RANKING",
     "ルール": "RULE",
-    "Writer/Testerについて": "ABOUT Writer/Tester",
+    "Writer/Testerについて": "About Writer/Tester",
     "よくある質問": "FAQ",
+
     "プロフィール設定": "Settings",
     "パスワードの変更": "Change Password",
     "ブックマーク": "Bookmarks",
     "問題作成": "Create Problems",
     "セット案作成": "Create Sets",
+    "ログアウト": "Log Out",
+    "ログイン": "Log In",
 
     "OnlineMathContestは世界中のSolverが参加する数学コンテストサイトです.": "OnlineMathContest is a global math contest site.",
     "ホーム": "Home",
