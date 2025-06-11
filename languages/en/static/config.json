@@ -1,3 +1,7 @@
-{
-    "問題": ""
-}
+[
+    {
+      "paths": ["/", "/home"],
+      "dictionaries": ["global"],
+      "selectors": ["header", "footer", ".contest-status"]
+    }
+  ]

@@ -1,42 +1,21 @@
-[
-    {
-      "paths": ["/", "/home"],
-      "dictionaries": ["global", "home"],
-      "selectors": ["header", "footer", ".contest-status"]
-    },
-    {
-      "paths": ["/contests/all"],
-      "dictionaries": ["global", "all-contests"],
-      "selectors": ["#allContestChart", "#contest-list"]
-    },
-    {
-      "paths": ["/ranking", "/ranking/annual"],
-      "dictionaries": ["global", "ranking"],
-      "selectors": ["h1", ".axis text", ".ranking-description"]
-    },
-    {
-      "paths": ["/problems"],
-      "dictionaries": ["global", "problems"],
-      "selectors": ["#main > p", ".problems-intro"]
-    },
-    {
-      "paths": ["/rules"],
-      "dictionaries": ["global", "rules"],
-      "selectors": ["#rules-content p"]
-    },
-    {
-      "paths": ["/contests/[^/]+$"],
-      "dictionaries": ["global", "contest"],
-      "selectors": ["h1", ".contest-info", "#rule-explanation p"]
-    },
-    {
-      "paths": ["/users/[^/]+"],
-      "dictionaries": ["global", "user"],
-      "selectors": ["h1", ".user-stats", ".user-bio"]
-    },
-    {
-      "paths": ["/contests/[^/]+/tasks/\\d+"],
-      "dictionaries": ["global", "contest"],
-      "selectors": ["header", ".task-info", ".task-nav"]
-    }
-  ]
+{
+    "ホーム": "Home",
+    "レーティング": "RATING",
+    "年間ランキング": "ANNUAL-RANKING",
+    "ルール": "RULE",
+    "Writer/Testerについて": "ABOUT Writer/Tester",
+    "よくある質問": "FAQ",
+    "プロフィール設定": "Settings",
+    "パスワードの変更": "Change Password",
+    "ブックマーク": "Bookmarks",
+    "問題作成": "Create Problems",
+    "セット案作成": "Create Sets",
+
+    "OnlineMathContestは世界中のSolverが参加する数学コンテストサイトです.": "OnlineMathContest is a global math contest site.",
+    "ホーム": "Home",
+    "コンテスト": "Contests",
+    "お知らせ": "Announce",
+    "会社概要": "About us",
+    "プライバシーポリシー": "Privacy Policy"
+  }
+  
