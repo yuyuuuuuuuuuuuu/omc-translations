@@ -40,8 +40,20 @@
         "dictionaries": ["contests_tasks"]
     },
     {
+        "paths": ["/contests/[^/]+/editorial/\\d+"],
+        "dictionaries": ["contests_editorials"]
+    },
+    {
         "paths": ["/contests/[^/]+/tasks"],
         "dictionaries": ["contests_problems"]
+    },
+    {
+        "paths": ["/contests/[^/]+/standings"],
+        "dictionaries": ["contests_standings"]
+    },
+    {
+        "paths": ["/contests/[^/]+/clarifications"],
+        "dictionaries": ["contests_questions"]
     },
     {
         "paths": ["/users(?:/.*)?"],
