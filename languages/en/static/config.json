@@ -5,7 +5,7 @@
     },
     {
         "paths": ["/contests/all"],
-        "dictionaries": ["contests_all", "mins"]
+        "dictionaries": ["mins", "contests_all"]
     },
     {
         "paths": ["/ranking"],
@@ -29,7 +29,7 @@
     },
     {
         "paths": ["/contests/[^/]+"],
-        "dictionaries": ["contests", "mins"]
+        "dictionaries": ["mins", "contests"]
     },
     {
         "paths": ["/contests(?:/.*)?"],
