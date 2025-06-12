@@ -2,11 +2,7 @@
     
     {
       "paths": ["/"],
-      "dictionaries": ["top", "announce"]
-    },
-    {
-        "paths": ["/announcements(?:/.*)?"],
-        "dictionaries": ["announce"]
+      "dictionaries": ["top"]
     },
     {
         "paths": ["/ranking"],
