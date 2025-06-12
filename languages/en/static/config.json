@@ -12,7 +12,7 @@
         "dictionaries": ["ranking"]
     },
     {
-        "paths": ["annual-ranking(?:/.*)?"],
+        "paths": ["/annual-ranking(?:/.*)?"],
         "dictionaries": ["annual-ranking"]
     },
     {
@@ -28,7 +28,7 @@
         "dictionaries": ["donations"]
     },
     {
-        "paths": ["/contests/(?:/.*)?"],
+        "paths": ["/contests(?:/.*)?"],
         "dictionaries": ["contests"]
     },
     {

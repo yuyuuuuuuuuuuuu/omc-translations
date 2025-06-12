@@ -52,7 +52,7 @@
     "HPがおかしな挙動を示している．": "The website is behaving abnormally.",
     "基本的に質問の内容によらず一定時間で返答を行っております．ただし，協議のため長時間を要することがございます．": "In general, we respond to questions within a fixed timeframe regardless of content. However, some may require extended time due to internal discussion.",
     "すべての質問にお答えするとは限りません．例えば，解答や解法を尋ねるものには一切お答えできません．": "We may not respond to all questions. For example, we cannot answer questions that ask for the solution or method.",
-    "こちら": "This",
+    "こちら": "This ",
     "に掲載されている用語・記法，および出題範囲で一般的に学習する用語・記法に関する質問にはお答えいたしません．": "glossary of terms and notations listed here, as well as those generally learned within the contest scope, are not subject to questions.",
     "重要度の高い質問は全体公開されることがございます．あらかじめご了承ください．": "Questions deemed important may be made public to all participants. Please be aware of this in advance.",
     "SNSなどへ疑問提起を行うことはお控えください．以下の「SNSなどへの言及について」もご参照ください．": "Please refrain from raising questions on social media. See also the section below titled 'About Mentions on SNS, etc.'",
@@ -86,6 +86,6 @@
     "自作問題の提出について": "About Submitting Original Problems",
     "右上のメニュー内「問題作成」より，自作問題の提出および管理が可能です．": "You can submit and manage your original problems via the 'Create Problems' option in the top-right menu.",
     "詳細は「": "For details, please refer to",
-    "Writer/Testerについて": "About Writers & Testers",
+    "Writer/Testerについて": " About Writers & Testers",
     "」をご確認ください．": "."
 }
