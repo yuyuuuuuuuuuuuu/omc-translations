@@ -40,7 +40,7 @@
         "dictionaries": ["contests_tasks"]
     },
     {
-        "paths": ["/contests/[^/]+/editorial/\\d+"],
+        "paths": ["/contests/[^/]+/editorial/\\d+", "/contests/[^/]+/editorial"],
         "dictionaries": ["contests_editorials"]
     },
     {
