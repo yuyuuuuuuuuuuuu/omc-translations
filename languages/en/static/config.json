@@ -28,8 +28,16 @@
         "dictionaries": ["donations"]
     },
     {
-        "paths": ["/contests(?:/.*)?"],
+        "paths": ["/contests[^/]+"],
         "dictionaries": ["contests"]
+    },
+    {
+        "paths": ["/contests[^/]+"],
+        "dictionaries": ["contests_bar"]
+    },
+    {
+        "paths": ["/contests/[^/]+/tasks/\\d+"],
+        "dictionaries": ["contests_tasks"]
     },
     {
         "paths": ["(?:/.*)?"],
