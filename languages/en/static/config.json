@@ -44,7 +44,7 @@
         "dictionaries": ["contests_problems"]
     },
     {
-        "paths": ["/users/(?:/.*)?"],
+        "paths": ["/users(?:/.*)?"],
         "dictionaries": ["user_page"]
     },
     {
