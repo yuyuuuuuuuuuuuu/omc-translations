@@ -1,14 +1,36 @@
-[
-    
+[    
     {
       "paths": ["/"],
       "dictionaries": ["top"]
     },
     {
+        "paths": ["/contests/all"],
+        "dictionaries": ["contests_all"]
+    },
+    {
         "paths": ["/ranking"],
         "dictionaries": ["ranking"]
     },
-
+    {
+        "paths": ["annual-ranking(?:/.*)?"],
+        "dictionaries": ["annual-ranking"]
+    },
+    {
+        "paths": ["/problems"],
+        "dictionaries": ["problems"]
+    },
+    {
+        "paths": ["/rules"],
+        "dictionaries": ["rules"]
+    },
+    {
+        "paths": ["/announcements/show/33"],
+        "dictionaries": ["donations"]
+    },
+    {
+        "paths": ["/contests/(?:/.*)?"],
+        "dictionaries": ["contests"]
+    },
     {
         "paths": ["(?:/.*)?"],
         "dictionaries": ["global"]
