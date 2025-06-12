@@ -1,5 +1,6 @@
 {
     "名前": "Name",
     "開始時刻": "Start Time",
-    "時間": "Duration"
+    "時間": "Duration",
+    " 分": " mins"
 }

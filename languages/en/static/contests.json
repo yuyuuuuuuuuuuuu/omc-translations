@@ -1,5 +1,5 @@
 {
-    "開始1時間前に公開": "Will be published 1 hour before the start",
+    "開始1時間前に公開": "Published 1 hour before the start",
     "参加登録": "Register to Participate",
     "参加をやめる": "Withdraw Participation",
     "Tester として参加しています": "You are participating as a Tester",
@@ -21,5 +21,6 @@
     "の素数表は使用しても構いません.": "the prime number table may be used.",
     "コンテスト終了時刻となるまで外部から得られない情報について言及しないでください.": "Do not mention any information that cannot be obtained externally until the contest ends.",
     "ルールの詳細は": "See the detailed rules",
-    "をご覧ください.": "for more information."
+    "をご覧ください.": "for more information.",
+    " 分": " mins"
 }

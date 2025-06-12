@@ -40,6 +40,14 @@
         "dictionaries": ["contests_tasks"]
     },
     {
+        "paths": ["/contests/[^/]+/tasks"],
+        "dictionaries": ["contests_problems"]
+    },
+    {
+        "paths": ["/users/(?:/.*)?"],
+        "dictionaries": ["user_page"]
+    },
+    {
         "paths": ["(?:/.*)?"],
         "dictionaries": ["global"]
     }
