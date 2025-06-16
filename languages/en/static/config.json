@@ -32,10 +32,6 @@
         "dictionaries": ["mins", "contests"]
     },
     {
-        "paths": ["/contests(?:/.*)?"],
-        "dictionaries": ["contests_bar"]
-    },
-    {
         "paths": ["/contests/[^/]+/tasks/\\d+"],
         "dictionaries": ["contests_tasks"]
     },
@@ -58,6 +54,10 @@
     {
         "paths": ["/users(?:/.*)?"],
         "dictionaries": ["user_page"]
+    },
+    {
+        "paths": ["/contests(?:/.*)?"],
+        "dictionaries": ["contests_bar"]
     },
     {
         "paths": ["(?:/.*)?"],
