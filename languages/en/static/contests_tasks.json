@@ -1,4 +1,6 @@
 {
+    "問題の指示に従って解答を非負整数で入力してください．": "Enter your answer as a non-negative integer according to the problem instructions.",
+    "正しくないジャッジ結果となるのを防ぐため，解答に空白文字を含まないようにしてください．": "To avoid incorrect judgment results, do not include any whitespace in your answer.",
     "外部ツールの使用およびWeb検索は禁止されています. ただし, ページ内の電卓および": "Use of external tools and web searches is prohibited. However, the on-page calculator and",
     "用語集": "glossary",
     "素数表": "prime number table",
@@ -10,7 +12,5 @@
     "解説": "Editorial",
     "点数": "Score",
     "解答": "Answer",
-    "問題の指示に従って解答を非負整数で入力してください．": "Enter your answer as a non-negative integer according to the problem instructions.",
-    "正しくないジャッジ結果となるのを防ぐため，解答に空白文字を含まないようにしてください．": "To avoid incorrect judgment results, do not include any whitespace in your answer.",
     "送信": "Submit"
 }

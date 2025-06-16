@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+
+<html><head><meta charset="utf-8"/>
+<link href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css" rel="stylesheet"/>
+</head><body>
+<p>A solution without using formal power series<br/>First, decide on a variety for which the two-pack is odd, and buy one pack of that variety's two-pack in advance. It is sufficient to consider only the case where all varieties have an even number of two-packs. Decide in advance how many apples of each variety to buy in total with two and four packs. At this time, if the number of each variety is not a multiple of 4, it is not suitable. Moreover, if there is at least one variety that is not a multiple of 8, by symmetry, the number of good and bad buying methods will be the same. Therefore, it is sufficient to consider only the case where all varieties are multiples of 8, and further canceling leads to considering only the case where no two-packs are bought and an even number of four-packs are bought. Next, decide how many apples of each variety to buy in total with four and eight packs. Then, by similar reasoning, it is sufficient to consider only the case where no four-packs are bought and an even number of eight-packs are bought. Repeating this process, it becomes sufficient to consider only the case where no packs of two or more are bought. Considering the packs already bought, ultimately, it is sufficient to consider only the case where one or fewer two-packs are bought for each variety, and the rest are all bought as single packs. This is easily computable.</p>
+</body></html>
