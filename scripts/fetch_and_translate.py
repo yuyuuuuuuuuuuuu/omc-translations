@@ -5,9 +5,9 @@ import os
 import sys
 import time
 import json
+import argparse
 import requests
 import subprocess
-import argparse
 from pathlib import Path
 from bs4 import BeautifulSoup
 
@@ -15,20 +15,21 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 import openai
 
 # ───────────────────────────────────────────────────────────
-# 1) 設定項目
+# 1) ==================== 設定項目 =========================
 # ───────────────────────────────────────────────────────────
 
-BASE_URL        = "https://onlinemathcontest.com"
-HOMEPAGE_URL    = BASE_URL + "/"
+BASE_URL         = "https://onlinemathcontest.com"
+HOMEPAGE_URL     = BASE_URL + "/"
 LANG_CONFIG_PATH = Path(__file__).parents[1] / "languages" / "config.json"
-OUTPUT_ROOT     = Path(__file__).parents[1] / "languages"
+OUTPUT_ROOT      = Path(__file__).parents[1] / "languages"
 
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_KEY:
     print("[Error] 環境変数 OPENAI_API_KEY が設定されていません。")
     sys.exit(1)
 openai.api_key = OPENAI_KEY
-GPT_MODEL = "gpt-4o-mini"
+
+GPT_MODEL  = "gpt-4o-mini"
 
 OMC_USERNAME = os.getenv("OMC_USERNAME")
 OMC_PASSWORD = os.getenv("OMC_PASSWORD")
@@ -42,7 +43,7 @@ if not (OMC_USERNAME and OMC_PASSWORD):
 # ───────────────────────────────────────────────────────────
 
 def fetch_url_html(url: str) -> str:
-    resp = requests.get(url, headers={"User-Agent":"Mozilla/5.0"})
+    resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
     resp.raise_for_status()
     return resp.text
 
@@ -50,32 +51,37 @@ def find_current_contest(html: str) -> str | None:
     soup = BeautifulSoup(html, "html.parser")
     for header in soup.select("div.contest-header"):
         status = header.find("div", class_="contest-status")
-        if status and "開催中" in status.get_text():
+        if status and "開催中" in status.get_text(strip=True):
             sib = header.find_next_sibling()
             while sib:
-                if sib.name=="a" and "contest-name" in sib.get("class", []):
+                if sib.name == "a" and "contest-name" in sib.get("class", []):
                     return sib["href"].rstrip("/").split("/")[-1]
                 sib = sib.find_next_sibling()
     return None
 
 def login_omc_with_playwright(page: Page) -> bool:
-    page.goto(BASE_URL+"/login", wait_until="networkidle")
+    login_url = BASE_URL + "/login"
+    page.goto(login_url, wait_until="networkidle")
     try:
         page.wait_for_selector("form[action='https://onlinemathcontest.com/login']", timeout=8000)
     except PlaywrightTimeoutError:
         print("[Error] ログインフォームが見つかりませんでした。")
         return False
-    token = page.get_attribute("input[name='_token']", "value")
-    if not token:
-        print("[Error] CSRF トークン取得失敗。")
+
+    csrf_token = page.get_attribute("input[name='_token']", "value")
+    if not csrf_token:
+        print("[Error] CSRF トークンを取得できませんでした。")
         return False
+
     page.fill("input[name='display_name']", OMC_USERNAME)
-    page.fill("input[name='password']", OMC_PASSWORD)
+    page.fill("input[name='password']",    OMC_PASSWORD)
     page.click("button[type='submit']")
     page.wait_for_load_state("networkidle")
+
     if page.url.endswith("/login"):
         print("[Error] ログインに失敗しました。")
         return False
+
     print("→ ログイン成功")
     return True
 
@@ -90,132 +96,156 @@ def fetch_task_ids_playwright(page: Page, contest_id: str) -> list[str]:
         marker = f"/contests/{contest_id}/tasks/"
         if marker in href:
             parts = href.strip().rstrip("/").split("/")
-            if len(parts)>=2 and parts[-2]=="tasks" and parts[-1].isdigit():
+            if len(parts) >= 2 and parts[-2] == "tasks" and parts[-1].isdigit():
                 ids.add(parts[-1])
-    return sorted(ids, key=lambda x:int(x))
+    return sorted(ids, key=lambda x: int(x))
 
-def extract_div_innerhtml_with_playwright(page: Page, url: str, div_id: str, timeout: int=8000) -> str:
+def extract_div_innerhtml_with_playwright(page: Page, url: str, div_id: str, timeout: int = 8000) -> str:
     try:
         page.goto(url, wait_until="networkidle")
         page.wait_for_selector(f"#{div_id}", timeout=timeout)
         return page.eval_on_selector(f"#{div_id}", "el => el.innerHTML") or ""
-    except Exception:
+    except Exception as e:
+        print(f"[Error] Playwright 例外: {e}")
         return ""
 
 def save_jp_problem(contest_id: str, task_id: str, page: Page) -> Path | None:
-    out_dir = OUTPUT_ROOT/"ja"/"contests"/contest_id/"tasks"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir/f"{task_id}.html"
-    if out_path.exists():
-        return out_path
+    jp_folder = OUTPUT_ROOT / "ja" / "contests" / contest_id / "tasks"
+    jp_folder.mkdir(parents=True, exist_ok=True)
+
+    jp_path = jp_folder / f"{task_id}.html"
+    if jp_path.exists():
+        return jp_path
+
     url = f"{BASE_URL}/contests/{contest_id}/tasks/{task_id}"
-    html = extract_div_innerhtml_with_playwright(page,url,"problem_content")
-    if not html.strip():
-        print(f"[Warning] {contest_id}/{task_id} の problem_content 取得失敗")
+    print(f"[Fetch JP] {url} → extracting problem_content …")
+    inner_html = extract_div_innerhtml_with_playwright(page, url, div_id="problem_content")
+    if not inner_html.strip():
+        print(f"[Warning] {contest_id}/{task_id} の problem_content が空または取得失敗")
         return None
-    out_path.write_text(html, encoding="utf-8")
-    print(f"[Saved JP] {out_path}")
-    return out_path
+
+    jp_path.write_text(inner_html, encoding="utf-8")
+    print(f"[Saved JP] {jp_path} (bytes={len(inner_html)})")
+    return jp_path
 
 def HtmlKatex(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
-    for katex in soup.select(".katex"):
-        ann = katex.find("annotation",{"encoding":"application/x-tex"})
-        if ann:
-            katex.replace_with(f"${ann.text}$")
+    for katex in soup.find_all(class_="katex"):
+        tex = katex.find("annotation", {"encoding": "application/x-tex"})
+        if tex:
+            katex.replace_with(f"${tex.text}$")
     return str(soup)
 
 def ask_gpt(question: str, model: str, term: str) -> str:
-    resp = openai.ChatCompletion.create(
-        model=model,
-        messages=[
-            {"role":"system","content":(
-                f"The HTML you will receive contains KaTeX math {term} in Japanese.\n"
-                "Translate all sentences into the target language, preserving HTML and KaTeX markup.\n"
-                "Return only the translated HTML."
-            )},
-            {"role":"user","content":question}
-        ],
-        temperature=0.0
-    )
-    return resp.choices[0].message.content.strip()
+    """
+    オリジナル Prompt をそのまま使用：
+    HTML 形式の KaTeX 数式を含む日本語テキストをターゲット言語に翻訳し、
+    フォーマットを崩さず HTML のみ返す。
+    """
+    try:
+        resp = openai.ChatCompletion.create(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        f"The text you are about to receive is HTML-formatted KaTeX math {term} written in Japanese.\n"
+                        "Please translate all sentences into the target language (e.g. English), preserving all KaTeX formatting\n"
+                        "(font size, line breaks, class=\"katex-display\" for display formulas, etc.).\n"
+                        "Return ONLY the translated HTML; do not wrap it in extra tags, do not alter KaTeX markup.\n"
+                        "If input is empty or none, return empty. The content may be long: please output fully.\n"
+                    )
+                },
+                {"role": "user", "content": question}
+            ],
+            temperature=0.0
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"[GPT error] {e}")
+        time.sleep(5)
+        return ask_gpt(question, model, term)
 
-def translate_html_for_lang(jp_html: str, term: str, lang: str) -> str:
-    latex = HtmlKatex(jp_html)
-    return ask_gpt(latex, GPT_MODEL, term)
+def translate_html_for_lang(jp_html: str, term: str, target_lang: str) -> str:
+    """
+    HtmlKatex で tex 部分を $...$ に戻し、
+    ask_gpt で元の Prompt を使って翻訳。
+    """
+    latex_ready = HtmlKatex(jp_html)
+    return ask_gpt(latex_ready, GPT_MODEL, term)
 
-def render_html_with_playwright(page: Page, path: Path):
-    header = """<!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"
-onload="renderMathInElement(document.body,{
-  delimiters:[
-    {left:'$$',right:'$$',display:true},
-    {left:'$', right:'$', display:false}
-  ]
-});"></script>
-</head><body>
+def render_html_with_playwright(page: Page, file_path: Path):
+    # （略：KaTeX レンダリングの実装は元のまま）
+    # --- 新規ファイル必ず存在する前提で呼び出されます ---
+    new_header = """<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
+  <script defer
+          src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
+  <script defer
+          src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, { 
+                    delimiters: [
+                      {left: '$$', right: '$$', display: true}, 
+                      {left: '$', right: '$', display: false}
+                    ] 
+                  });"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
 """
-    orig = path.read_text(encoding="utf-8")
-    wrapped = header + orig + "\n</body></html>"
-    path.write_text(wrapped, encoding="utf-8")
-    page.goto("file://"+str(path.resolve()), wait_until="networkidle")
-    page.wait_for_load_state("networkidle")
-    body = BeautifulSoup(page.content(),"html.parser").body.decode_contents()
-    final = f"""<!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
-</head><body>
-{body}
-</body></html>"""
-    path.write_text(final, encoding="utf-8")
+    original = file_path.read_text(encoding="utf-8")
+    wrapped  = new_header + original + "\n</body></html>"
+    file_path.write_text(wrapped, encoding="utf-8")
 
-def change_problem_display(contest_id: str, task_id: str, lang: str="en"):
-    path = OUTPUT_ROOT/lang/"contests"/contest_id/"tasks"/f"{task_id}.html"
-    if not path.exists(): return
-    soup = BeautifulSoup(path.read_text(encoding="utf-8"), "html.parser")
-    for elt in soup.select("span.katex-display"):
+    file_url = "file://" + str(file_path.resolve())
+    page.goto(file_url, wait_until="networkidle")
+    page.wait_for_load_state("networkidle")
+    full_html = page.content()
+
+    soup = BeautifulSoup(full_html, "html.parser")
+    body_content = soup.body.decode_contents()
+
+    final_html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
+</head>
+<body>
+{body_content}
+</body>
+</html>"""
+    file_path.write_text(final_html, encoding="utf-8")
+    print(f"[Rendered KaTeX] {file_path} をレンダリング済み HTML に変換しました。")
+
+def change_problem_display(contest_id: str, task_id: str, lang: str = "en"):
+    # （略：中央寄せ処理は元のまま）
+    file_path = OUTPUT_ROOT / lang / "contests" / contest_id / "tasks" / f"{task_id}.html"
+    if not file_path.exists():
+        return
+    soup = BeautifulSoup(file_path.read_text(encoding="utf-8"), "html.parser")
+    for elt in soup.find_all("span", class_="katex-display"):
         wrapper = soup.new_tag("div", style="text-align:center;")
         elt.wrap(wrapper)
-    path.write_text(str(soup), encoding="utf-8")
+    file_path.write_text(str(soup), encoding="utf-8")
+    print(f"[Wrapped display] {file_path} の <span class=\"katex-display\"> を中央寄せに変更")
 
 
 # ───────────────────────────────────────────────────────────
-# 3) 本体
+# 3) メインロジック：full_translate / json_only / CLI
 # ───────────────────────────────────────────────────────────
 
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-import os
-import sys
-import json
-import subprocess
-import argparse
-from pathlib import Path
-from bs4 import BeautifulSoup
-import requests
-import openai
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Page, Browser
-
-BASE_URL        = "https://onlinemathcontest.com"
-HOMEPAGE_URL    = BASE_URL + "/"
-LANG_CONFIG_PATH = Path(__file__).parents[1] / "languages" / "config.json"
-OUTPUT_ROOT     = Path(__file__).parents[1] / "languages"
-
-# （省略：各種 helper 関数（login_omc_with_playwright, find_current_contest, fetch_task_ids_playwright,
-#  extract_div_innerhtml_with_playwright, save_jp_problem, HtmlKatex, ask_gpt, translate_html_for_lang,
-#  render_html_with_playwright, change_problem_display, json_only）を先の版からそのままコピペしてください）
-
-def full_translate(contest_override: str|None):
+def full_translate(contest_override: str | None):
     with sync_playwright() as p:
         browser: Browser = p.chromium.launch(headless=True)
         page = browser.new_context().new_page()
 
-        # ログイン & コンテストID検出
+        # ログイン → コンテストID取得
         if not login_omc_with_playwright(page):
             sys.exit(1)
         page.goto(HOMEPAGE_URL, wait_until="networkidle")
@@ -231,47 +261,43 @@ def full_translate(contest_override: str|None):
         task_ids = fetch_task_ids_playwright(page, current)
         print(f"→ {current} のタスク一覧 = {task_ids}")
 
-        # 日本語版を保存
+        # 日本語取得
         for tid in task_ids:
             save_jp_problem(current, tid, page)
 
-        # 言語順の読み込み（config.json の ["en", 他...]）
+        # 言語順取得
         langs = json.loads(LANG_CONFIG_PATH.read_text(encoding="utf-8")).get("languages", [])
-        ordered = ["en"] + [l for l in langs if l!="en"]
+        ordered = ["en"] + [l for l in langs if l != "en"]
 
-        # ── ① 英語まとめて翻訳 & コミット
+        # 英語→その他言語インタリーブ翻訳 & git commit/push
         for tid in task_ids:
-            jp_path = OUTPUT_ROOT/"ja"/"contests"/current/"tasks"/f"{tid}.html"
-            out_en = OUTPUT_ROOT/"en"/"contests"/current/"tasks"/f"{tid}.html"
+            jp_path = OUTPUT_ROOT / "ja" / "contests" / current / "tasks" / f"{tid}.html"
+
+            # ── 英語
+            out_en = OUTPUT_ROOT / "en" / "contests" / current / "tasks" / f"{tid}.html"
             if not out_en.exists():
-                # ディレクトリ作成
                 out_en.parent.mkdir(parents=True, exist_ok=True)
-                # 翻訳結果を書き込み
-                translated = translate_html_for_lang(jp_path.read_text(encoding="utf-8"), "task", "en")
-                out_en.write_text(translated, encoding="utf-8")
-                # KaTeX レンダリング & 中央寄せ
+                translated_en = translate_html_for_lang(jp_path.read_text(encoding="utf-8"), "task", "en")
+                out_en.write_text(translated_en, encoding="utf-8")
                 render_html_with_playwright(page, out_en)
                 change_problem_display(current, tid, "en")
-                # Git commit & push
+                # Git local config + commit + push
                 try:
                     subprocess.run(["git","config","--local","user.name","github-actions[bot]"], check=True)
                     subprocess.run(["git","config","--local","user.email","github-actions[bot]@users.noreply.github.com"], check=True)
                     subprocess.run(["git","add", str(out_en)], check=True)
                     subprocess.run(["git","commit","-m", f"Add {out_en}"], check=True)
                     subprocess.run(["git","push","origin","HEAD:main"], check=True)
-                    print(f"[Git] {out_en} を commit & push")
                 except subprocess.CalledProcessError as e:
                     print(f"[Error] Git 操作中に例外発生: {e}")
 
-        # ── ② その他言語 (インタリーブ) 翻訳 & コミット
-        for tid in task_ids:
-            jp_path = OUTPUT_ROOT/"ja"/"contests"/current/"tasks"/f"{tid}.html"
+            # ── その他言語
             for lang in ordered[1:]:
-                out_p = OUTPUT_ROOT/lang/"contests"/current/"tasks"/f"{tid}.html"
+                out_p = OUTPUT_ROOT / lang / "contests" / current / "tasks" / f"{tid}.html"
                 if not out_p.exists():
                     out_p.parent.mkdir(parents=True, exist_ok=True)
-                    translated = translate_html_for_lang(jp_path.read_text(encoding="utf-8"), "task", lang)
-                    out_p.write_text(translated, encoding="utf-8")
+                    translated_p = translate_html_for_lang(jp_path.read_text(encoding="utf-8"), "task", lang)
+                    out_p.write_text(translated_p, encoding="utf-8")
                     render_html_with_playwright(page, out_p)
                     change_problem_display(current, tid, lang)
                     try:
@@ -280,11 +306,10 @@ def full_translate(contest_override: str|None):
                         subprocess.run(["git","add", str(out_p)], check=True)
                         subprocess.run(["git","commit","-m", f"Add {out_p}"], check=True)
                         subprocess.run(["git","push","origin","HEAD:main"], check=True)
-                        print(f"[Git] {out_p} を commit & push")
                     except subprocess.CalledProcessError as e:
                         print(f"[Error] Git 操作中に例外発生: {e}")
 
-        # ── JSON 出力用に duration_min を取得
+        # duration_min 取得 & JSON 出力
         html_ct = fetch_url_html(f"{BASE_URL}/contests/{current}")
         soup2 = BeautifulSoup(html_ct, "html.parser")
         duration = 60
@@ -299,10 +324,8 @@ def full_translate(contest_override: str|None):
         print(json.dumps({"contest_id":current, "duration_min":duration}, ensure_ascii=False, separators=(',',':')))
         browser.close()
 
-
-
-def json_only(contest_override: str|None):
-    # contest_id の検出
+def json_only(contest_override: str | None):
+    # contest_id と duration_min だけを出力
     if contest_override:
         current = contest_override
     else:
@@ -312,7 +335,6 @@ def json_only(contest_override: str|None):
         print(json.dumps({"contest_id":"", "duration_min":0}, ensure_ascii=False, separators=(',',':')))
         return
 
-    # duration_min の検出
     html_ct = fetch_url_html(f"{BASE_URL}/contests/{current}")
     soup2 = BeautifulSoup(html_ct, "html.parser")
     duration = 60
@@ -326,10 +348,9 @@ def json_only(contest_override: str|None):
 
     print(json.dumps({"contest_id":current, "duration_min":duration}, ensure_ascii=False, separators=(',',':')))
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--contest", help="対象の Contest ID 指定（省略時は開催中を自動検出）")
+    parser.add_argument("--contest",      help="対象の Contest ID を指定（省略時は開催中を自動検出）")
     parser.add_argument("--contest-json", action="store_true",
                         help="contest_id と duration_min のみ JSON 出力")
     args = parser.parse_args()
