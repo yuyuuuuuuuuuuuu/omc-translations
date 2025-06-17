@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# scripts/fetch_and_translate_all_user_editorials.py
+# scripts/update_user_editorials.py
 
 import os
 import sys

@@ -8,34 +8,28 @@ import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
 import subprocess
-
-
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Page, Browser
 import openai
 
 # ───────────────────────────────────────────────────────────
 # 1) ==================== 設定項目 =========================
 # ───────────────────────────────────────────────────────────
-
 BASE_URL     = "https://onlinemathcontest.com"
 HOMEPAGE_URL = BASE_URL + "/"
-
 LANG_CONFIG_PATH = Path(__file__).parents[1] / "languages" / "config.json"
 OUTPUT_ROOT      = Path(__file__).parents[1] / "languages"
-
-# OpenAI API キー（必須）
+# OpenAI API キー
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_KEY:
     print("[Error] 環境変数 OPENAI_API_KEY が設定されていません。")
     sys.exit(1)
 openai.api_key = OPENAI_KEY
 GPT_MODEL = "gpt-4o-mini"
-
-# OMC ログイン用ユーザ情報（環境変数から取得）
+# OMC ログイン
 OMC_USERNAME = os.getenv("OMC_USERNAME")
 OMC_PASSWORD = os.getenv("OMC_PASSWORD")
 if not (OMC_USERNAME and OMC_PASSWORD):
-    print("[Error] 環境変数 OMC_USERNAME / OMC_PASSWORD が設定されていません。")
+    print("[Error] OMC_USERNAME / OMC_PASSWORD が設定されていません。")
     sys.exit(1)
 
 
@@ -50,7 +44,6 @@ def render_html_with_playwright(page: Page, file_path: Path):
     headless Chromium (Playwright) で開いて JS による数式描画を行い、
     最終的には <body> 部分だけを抜き出して上書き保存する。
     """
-    # 1) 一時的に <head> と <body> でラップ
     new_header = """<!DOCTYPE html>
 <html>
 <head>
@@ -75,13 +68,11 @@ def render_html_with_playwright(page: Page, file_path: Path):
     wrapped = new_header + original_content + "\n</body></html>"
     file_path.write_text(wrapped, encoding="utf-8")
 
-    # 2) file:// で開いてレンダリングを待機
     file_url = "file://" + str(file_path.resolve())
     page.goto(file_url, wait_until="networkidle")
     page.wait_for_load_state("networkidle")
     full_html = page.content()
 
-    # 3) BeautifulSoup で <body> 部分だけを切り出す
     soup = BeautifulSoup(full_html, "html.parser")
     body_content = soup.body.decode_contents()
 
@@ -325,142 +316,65 @@ def save_translated_html(contest_id: str,
     out_path.write_text(translated_html, encoding="utf-8")
     print(f"[Saved {lang}] {out_path} (bytes={len(translated_html)})")
 
-    # KaTeX レンダリング
     render_html_with_playwright(page, out_path)
-    # 数式中央寄せ
     change_problem_display(contest_id, task_id, lang)
 
 
 def check_existence_problem(contest_id: str, task_id: str, lang: str = "en") -> bool:
     return (OUTPUT_ROOT / lang / "contests" / contest_id / "tasks" / f"{task_id}.html").exists()
 
+def translate_tasks_for_contest(contest_id: str, page: Page):
+    task_ids = fetch_task_ids_playwright(page, contest_id)
+    if not task_ids:
+        print(f"[Warning] コンテスト {contest_id} にタスクが見つかりません。")
+        return
+    languages = load_languages_list() 
+    for tid in task_ids:
+        save_jp_problem(contest_id, tid, page)
+    for tid in task_ids:
+        if not check_existence_problem(contest_id, tid, lang="en"):
+            save_translated_html(contest_id, tid, lang="en", term="task",
+                                 jp_filepath=OUTPUT_ROOT/"ja"/"contests"/contest_id/"tasks"/f"{tid}.html", page=page)
+            git_add_and_push(f"languages/en/contests/{contest_id}/tasks/{tid}.html")
+    other_langs = [l for l in languages if l != "en"]
+    for tid in task_ids:
+        for lang in other_langs:
+            if not check_existence_problem(contest_id, tid, lang=lang):
+                save_translated_html(contest_id, tid, lang=lang, term="task",
+                                     jp_filepath=OUTPUT_ROOT/"ja"/"contests"/contest_id/"tasks"/f"{tid}.html", page=page)
+                git_add_and_push(f"languages/{lang}/contests/{contest_id}/tasks/{tid}.html")
+
+def git_add_and_push(path: str):
+    try:
+        subprocess.run(["git", "add", path], check=True)
+        subprocess.run(["git", "commit", "-m", f"Add {path}"], check=True)
+        subprocess.run(["git", "push", "origin", "HEAD:main"], check=True)
+        print(f"[Git] {path} をコミット＆プッシュしました。")
+    except subprocess.CalledProcessError as e:
+        print(f"[Error] Git 操作中に例外発生: {e}")
 
 # ───────────────────────────────────────────────────────────
-# 5) ================ main 関数 ============================
+# 3) main() + --contest オプション
 # ───────────────────────────────────────────────────────────
-
 def main():
-    """
-    OMC の現在開催中コンテストを検出し、
-    1) 各タスク (問題文) の日本語版を取得 → 英語翻訳 → KaTeX レンダリング → 中央寄せ → 即時 git commit & push
-    2) コンテストページから「Contest Duration (分)」を取得
-    3) contest_id + duration_min (分) をスペース無し JSON 形式で標準出力する
-    """
     with sync_playwright() as p:
-        print("→ Headless Chromium を起動します")
-        browser: Browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
-        page = context.new_page()
-
-        # 1) OMC にログイン
-        success = login_omc_with_playwright(page)
-        if not success:
-            print("[Error] ログインに失敗したため、処理を終了します。")
-            browser.close()
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_context().new_page()
+        if not login_omc_with_playwright(page):
             sys.exit(1)
-
-        # 2) トップページを取得して「開催中コンテスト ID」を抽出
-        print("→ 開催中コンテストを探すため、トップページを取得します")
+        # トップページ
         page.goto(HOMEPAGE_URL, wait_until="networkidle")
         home_html = page.content()
-        current_contest = find_current_contest(home_html)
-        if current_contest is None:
-            print("[Info] 開催中のコンテストが見つかりませんでした。終了します。")
-            browser.close()
-            # 空の JSON でも返してワークフローが壊れないように
-            print(json.dumps({"contest_id":"", "duration_min":0}, ensure_ascii=False, separators=(',',':')))
+        default_contest = find_current_contest(home_html)
+        contest_id = DEFAULT_CONTEST if (DEFAULT_CONTEST := os.getenv("CONTEST_ID")) else default_contest
+        if not contest_id:
+            print("[Info] contest_id が指定も自動検出もできませんでした。")
             sys.exit(0)
-        print(f"→ 開催中コンテスト ID = {current_contest}")
-
-        # 3) Playwright を使ってタスク一覧を取得 (ログイン済みCookie付き)
-        task_ids = fetch_task_ids_playwright(page, current_contest)
-        if not task_ids:
-            print(f"[Warning] コンテスト {current_contest} にタスクが見つかりません。")
-            # タスクなしでも JSON を返す
-            print(json.dumps({"contest_id":current_contest, "duration_min":0}, ensure_ascii=False, separators=(',',':')))
-            browser.close()
-            sys.exit(0)
-        print(f"→ {current_contest} のタスク一覧 = {task_ids}")
-
-        # 4) 翻訳対象言語リストを読み込む
-        languages = load_languages_list()
-        print(f"→ 翻訳対象言語: {languages}")
-
-        # 5) 各タスクについて 日本語版を取得→英語翻訳→KaTeXレンダリング→中央寄せ→即時 push
-        for tid in task_ids:
-            # (A) 日本語版を取得
-            jp_path = save_jp_problem(current_contest, tid, page)
-            if jp_path is None:
-                continue
-
-            # (B) 英語 (en) 翻訳、レンダリング、中央寄せ
-            if not check_existence_problem(current_contest, tid, lang="en"):
-                save_translated_html(
-                    contest_id=current_contest,
-                    task_id=tid,
-                    lang="en",
-                    term="task",
-                    jp_filepath=jp_path,
-                    page=page
-                )
-
-                # ────────────── git add／commit／push ──────────────
-                try:
-                    subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
-                    subprocess.run(["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"], check=True)
-                    file_to_add = f"languages/en/contests/{current_contest}/tasks/{tid}.html"
-                    subprocess.run(["git", "add", file_to_add], check=True)
-                    commit_msg = f"Add translated task en: {current_contest}/{tid}"
-                    subprocess.run(["git", "commit", "-m", commit_msg], check=True)
-                    subprocess.run(["git", "push", "origin", "HEAD:main"], check=True)
-                    print(f"[Git] {file_to_add} をコミット＆プッシュしました。")
-                except subprocess.CalledProcessError as e:
-                    print(f"[Error] Git 操作中に例外発生: {e}")
-                # ──────────────────────────────────────────────────────────
-
-            else:
-                print(f"[Skip EN] {current_contest}/{tid} はすでに英語翻訳済みです。")
-
-            # ※必要であれば、同様に remaining_langs をループして他言語翻訳＆push も可能
-
-        print("→ すべてのタスク翻訳処理が完了しました。")
-
-        # 6) コンテストページから「Contest Duration (分)」を取得
-        try:
-            contest_url = f"{BASE_URL}/contests/{current_contest}"
-            print(f"→ Contest ページから duration を取得: {contest_url}")
-            html_contest = fetch_url_html(contest_url)
-            soup2 = BeautifulSoup(html_contest, "html.parser")
-
-            duration_min = None
-            for p_tag in soup2.find_all("p", class_="list-group-item-heading"):
-                text = p_tag.get_text(strip=True)
-                if text.endswith("分"):
-                    sibling = p_tag.find_next_sibling("p", class_="list-group-item-text")
-                    if sibling and "Contest Duration" in sibling.get_text():
-                        digits = "".join(filter(str.isdigit, text))
-                        if digits.isdigit():
-                            duration_min = int(digits)
-                            break
-
-            if duration_min is None:
-                print("[Warning] duration_min をパースできませんでした。デフォルト 60 分を設定します。")
-                duration_min = 60
-            else:
-                print(f"→ 取得した Contest Duration = {duration_min} 分")
-
-        except Exception as e:
-            print(f"[Warning] duration_min の取得中に例外発生: {e}")
-            duration_min = 60
-
-        # 7) contest_id と duration_min をスペース無し JSON 形式で出力
-        result = {
-            "contest_id": current_contest,
-            "duration_min": duration_min
-        }
-        print(json.dumps(result, ensure_ascii=False, separators=(',',':')))
-
+        print(f"→ 対象 Contest ID = {contest_id}")
+        translate_tasks_for_contest(contest_id, page)
+        # JSON 出力処理などは従来通り（必要であれば）
         browser.close()
 
 if __name__ == "__main__":
+    # env で CONTEST_ID があれば優先
     main()

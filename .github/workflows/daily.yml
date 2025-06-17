@@ -1,0 +1,26 @@
+name: Daily OMC Automation
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 毎日 23:00 UTC → 翌日 8:00 JST
+    - cron: '0 23 * * *'
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python & Dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python3 -m playwright install chromium
+      - name: Run daily orchestrator
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OMC_USERNAME:   ${{ secrets.OMC_USERNAME }}
+          OMC_PASSWORD:   ${{ secrets.OMC_PASSWORD }}
+        run: |
+          python3 scripts/orchestrate_daily.py

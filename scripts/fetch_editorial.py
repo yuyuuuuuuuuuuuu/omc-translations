@@ -7,31 +7,21 @@ import json
 import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
-
+import subprocess
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Page, Browser
 import openai
 
-# ───────────────────────────────────────────────────────────
-# 1) ==================== 設定項目 =========================
-# ───────────────────────────────────────────────────────────
-
-BASE_URL       = "https://onlinemathcontest.com"
-HOMEPAGE_URL   = BASE_URL + "/"
-
+BASE_URL     = "https://onlinemathcontest.com"
 LANG_CONFIG_PATH = Path(__file__).parents[1] / "languages" / "config.json"
 OUTPUT_ROOT      = Path(__file__).parents[1] / "languages"
 
-# OpenAI API キー（必須）
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_KEY:
-    print("[Error] 環境変数 OPENAI_API_KEY が設定されていません。")
+    print("[Error] OPENAI_API_KEY が設定されていません。")
     sys.exit(1)
 openai.api_key = OPENAI_KEY
 GPT_MODEL = "gpt-4o-mini"
 
-# ───────────────────────────────────────────────────────────
-# 2) ================= 共通ヘルパー関数群 ===================
-# ───────────────────────────────────────────────────────────
 
 def fetch_url_html(url: str) -> str:
     """
@@ -104,9 +94,7 @@ def fetch_editorial_html_with_playwright(page: Page, contest_id: str, task_id: s
     url = f"{BASE_URL}/contests/{contest_id}/editorial/{task_id}"
     try:
         page.goto(url, wait_until="networkidle")
-        # editorial_content が描画されるまで待つ
         page.wait_for_selector("#editorial_content", timeout=8000)
-        # JS 描画後の innerHTML を取る
         content = page.eval_on_selector("#editorial_content", "el => el.innerHTML")
         return content or ""
     except PlaywrightTimeoutError:
@@ -320,9 +308,7 @@ def save_translated_editorial(contest_id: str,
     out_path.write_text(translated_html, encoding="utf-8")
     print(f"[Saved {lang}] {out_path} (bytes={len(translated_html)})")
 
-    # KaTeX レンダリング
     render_html_with_playwright(page, out_path)
-    # 数式中央寄せ処理
     change_editorial_display(contest_id, task_id, lang)
 
 
@@ -333,73 +319,37 @@ def check_existence_editorial(contest_id: str, task_id: str, lang: str = "en") -
     return (OUTPUT_ROOT / lang / "contests" / contest_id / "editorial" / f"{task_id}.html").exists()
 
 
-# ───────────────────────────────────────────────────────────
-# 3) ======================== main ========================
-# ───────────────────────────────────────────────────────────
+def translate_editorials_for_contest(contest_id:str, page:Page):
+    task_ids = fetch_task_ids(contest_id)
+    langs = load_languages_list()
+    # JP 取得
+    for tid in task_ids:
+        save_jp_editorial(contest_id, tid, page)
+    # EN 翻訳
+    for tid in task_ids:
+        if not check_existence_editorial(contest_id, tid, lang="en"):
+            save_translated_editorial(contest_id, tid, lang="en", term="editorial",
+                                     jp_filepath=OUTPUT_ROOT/"ja"/"contests"/contest_id/"editorial"/f"{tid}.html", page=page)
+            git_add_and_push(...)
+    # 他言語
+    other = [l for l in langs if l!="en"]
+    for tid in task_ids:
+        for lang in other:
+            if not check_existence_editorial(contest_id, tid, lang=lang):
+                save_translated_editorial(contest_id, tid, lang=lang, term="editorial",
+                                         jp_filepath=OUTPUT_ROOT/"ja"/"contests"/contest_id/"editorial"/f"{tid}.html", page=page)
+                git_add_and_push(...)
 
-def main():
-    # 1) 最新の終了済コンテスト ID を取得（ログイン不要）
-    try:
-        home_html = fetch_url_html(HOMEPAGE_URL)
-    except Exception as e:
-        print(f"[Error] トップページ取得失敗 → {e}")
-        sys.exit(1)
-
-    latest_contest = find_latest_ended_contest(home_html)
-    if latest_contest is None:
-        print("最新の終了済コンテストが見つかりませんでした。処理を終了します。")
-        return
-
-    print(f"最新の終了済コンテスト ID = {latest_contest}")
-
-    # 2) タスク一覧を取得
-    task_ids = fetch_task_ids(latest_contest)
-    if not task_ids:
-        print(f"[Warning] {latest_contest} にタスクが 0 件です。処理を終了します。")
-        return
-
-    print(f"{latest_contest} のタスク一覧 = {task_ids}")
-
-    # 3) 翻訳対象言語リストを取得
-    languages = load_languages_list()
-    print(f"翻訳対象言語リスト = {languages}")
-
-    # 4) Playwright の準備（editorial 取得 & 翻訳後 KaTeX レンダリングに使用）
+if __name__=="__main__":
+    import argparse
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--contest", help="対象ContestIDを指定")
+    args=parser.parse_args()
+    contest = args.contest or (find_latest_ended_contest(fetch_url_html(BASE_URL + "/")))
+    if not contest:
+        sys.exit(0)
     with sync_playwright() as p:
-        print("→ Headless Chromium を起動します")
-        browser: Browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
-        page: Page = context.new_page()
-
-        # 5) 日本語版解説を取得しローカルに保存
-        jp_map: dict[str, Path] = {}
-        for tid in task_ids:
-            jp_path = save_jp_editorial(latest_contest, tid, page)
-            if jp_path is None:
-                continue
-            jp_map[tid] = jp_path
-
-        # 6) 英語版 (en) 翻訳
-        for tid, jp_path in jp_map.items():
-            if not check_existence_editorial(latest_contest, tid, lang="en"):
-                save_translated_editorial(latest_contest, tid, lang="en", term="editorial", jp_filepath=jp_path, page=page)
-            else:
-                print(f"[Skip EN] {latest_contest}/{tid} の解説は既に EN 翻訳済みです。")
-
-        # 7) 英語以外の残り言語を順次処理
-        remaining_langs = [l for l in languages if l != "en"]
-        if remaining_langs:
-            print(f"EN 翻訳完了 → 残り言語を順番に処理します: {remaining_langs}")
-            for lang in remaining_langs:
-                for tid, jp_path in jp_map.items():
-                    if not check_existence_editorial(latest_contest, tid, lang=lang):
-                        save_translated_editorial(latest_contest, tid, lang=lang, term="editorial", jp_filepath=jp_path, page=page)
-                    else:
-                        print(f"[Skip {lang}] {latest_contest}/{tid} の解説はすでに {lang} 翻訳済みです。")
-
-        print("すべての解説翻訳処理が完了しました。")
+        browser=p.chromium.launch(headless=True)
+        page=browser.new_context().new_page()
+        translate_editorials_for_contest(contest, page)
         browser.close()
-
-
-if __name__ == "__main__":
-    main()
