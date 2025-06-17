@@ -1,52 +1,81 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import os
 import sys
 import time
 import datetime
 import subprocess
 
-for v in ("OPENAI_API_KEY","OMC_USERNAME","OMC_PASSWORD"):
+# ───────────────────────────────────────────────────────────
+# 環境変数チェック
+# ───────────────────────────────────────────────────────────
+for v in ("OPENAI_API_KEY", "OMC_USERNAME", "OMC_PASSWORD"):
     if not os.getenv(v):
         print(f"[Error] {v} が設定されていません。")
         sys.exit(1)
 
-
-def run(cmd):
+# ───────────────────────────────────────────────────────────
+# コマンド実行ヘルパー
+# ───────────────────────────────────────────────────────────
+def run(cmd: str):
     print(f"→ 実行: {cmd}")
-    subprocess.run(cmd, shell=True)
+    if subprocess.run(cmd, shell=True).returncode != 0:
+        print(f"[Warning] コマンド失敗: {cmd}")
 
-
-def sleep_until(hour:int, minute:int=0):
+# ───────────────────────────────────────────────────────────
+# JST の指定時刻までスリープする（すでに過ぎていればスキップ）
+# ───────────────────────────────────────────────────────────
+def sleep_until(hour: int, minute: int = 0):
     tz = datetime.timezone(datetime.timedelta(hours=9))
     now = datetime.datetime.now(tz)
     target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-    if now >= target:
-        target += datetime.timedelta(days=1)
-    delta = (target - now).total_seconds()
-    print(f"→ {hour:02d}:{minute:02d} JST まで {int(delta)} 秒待機")
-    time.sleep(delta)
 
+    if now < target:
+        delta = (target - now).total_seconds()
+        print(f"→ {hour:02d}:{minute:02d} JST まで {int(delta)} 秒待機")
+        time.sleep(delta)
+    else:
+        print(f"→ {hour:02d}:{minute:02d} JST は既に過ぎているためスキップ (現在 {now.time().replace(microsecond=0)})")
 
+# ───────────────────────────────────────────────────────────
+# メイン処理
+# ───────────────────────────────────────────────────────────
 def main():
-    # 1) 8:00 JST
+    # 1) 毎朝 8:00 JST → 参加登録
+    sleep_until(8)
     run("python3 scripts/participate_today.py")
-    # 2) 9:00 JST
+
+    # 2) 9:00 JST → 問題文翻訳
     sleep_until(9)
-    run("python3 scripts/fetch_and_translate.py --contest=")
-    cp = subprocess.run("python3 scripts/fetch_and_translate.py --contest-json", shell=True,
-                        capture_output=True, text=True)
+    run("python3 scripts/fetch_and_translate.py")
+
+    # 3) コンテスト終了まで待機
+    #    fetch_and_translate.py に --contest-json オプションで duration_min を返すようにしていればそれを使う
+    print("→ コンテスト継続時間を取得...")
+    cp = subprocess.run(
+        "python3 scripts/fetch_and_translate.py --contest-json",
+        shell=True,
+        capture_output=True,
+        text=True
+    )
     try:
-        dmin = int(__import__('json').loads(cp.stdout.splitlines()[-1]).get('duration_min',60))
-    except:
+        import json
+        j = json.loads(cp.stdout.strip().splitlines()[-1])
+        dmin = int(j.get("duration_min", 60))
+    except Exception:
         dmin = 60
     print(f"→ コンテスト継続時間: {dmin} 分 → 待機")
     time.sleep(dmin * 60)
-    # 3) 解説翻訳
-    run("python3 scripts/fetch_editorial.py --contest=")
-    # 4) 過去3コンテスト更新
+
+    # 4) 解説翻訳
+    run("python3 scripts/fetch_editorial.py")
+
+    # 5) 過去３コンテスト更新
     run("python3 scripts/update_past3.py")
-    DAY = 7
-    # 5) DAYの倍数なら全ユーザー解説更新
-    if datetime.datetime.now().day % DAY == 0:
+
+    # 6) 日付が７の倍数ならユーザー解説全更新
+    today = datetime.datetime.now(tz=datetime.timezone(datetime.timedelta(hours=9)))
+    if today.day % 7 == 0:
         run("python3 scripts/update_user_editorials.py")
 
 if __name__ == "__main__":
