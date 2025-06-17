@@ -22,6 +22,18 @@ if not OPENAI_KEY:
 openai.api_key = OPENAI_KEY
 GPT_MODEL = "gpt-4o-mini"
 
+def git_add_and_push(file_path: Path):
+    try:
+        # ローカルリポジトリの user.name / email を設定
+        subprocess.run(["git", "config", "--local", "user.name", "github-actions[bot]"], check=True)
+        subprocess.run(["git", "config", "--local", "user.email", "github-actions[bot]@users.noreply.github.com"], check=True)
+        # add → commit → push
+        subprocess.run(["git", "add", str(file_path)], check=True)
+        subprocess.run(["git", "commit", "-m", f"Add {file_path}"], check=True)
+        subprocess.run(["git", "push", "origin", "HEAD:main"], check=True)
+        print(f"[Git] {file_path} を commit & push")
+    except subprocess.CalledProcessError as e:
+        print(f"[Error] Git 操作中に例外発生: {e}")
 
 def fetch_url_html(url: str) -> str:
     """
