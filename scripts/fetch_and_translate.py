@@ -188,12 +188,34 @@ def change_problem_display(contest_id: str, task_id: str, lang: str="en"):
 # 3) 本体
 # ───────────────────────────────────────────────────────────
 
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import os
+import sys
+import json
+import subprocess
+import argparse
+from pathlib import Path
+from bs4 import BeautifulSoup
+import requests
+import openai
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Page, Browser
+
+BASE_URL        = "https://onlinemathcontest.com"
+HOMEPAGE_URL    = BASE_URL + "/"
+LANG_CONFIG_PATH = Path(__file__).parents[1] / "languages" / "config.json"
+OUTPUT_ROOT     = Path(__file__).parents[1] / "languages"
+
+# （省略：各種 helper 関数（login_omc_with_playwright, find_current_contest, fetch_task_ids_playwright,
+#  extract_div_innerhtml_with_playwright, save_jp_problem, HtmlKatex, ask_gpt, translate_html_for_lang,
+#  render_html_with_playwright, change_problem_display, json_only）を先の版からそのままコピペしてください）
+
 def full_translate(contest_override: str|None):
     with sync_playwright() as p:
         browser: Browser = p.chromium.launch(headless=True)
         page = browser.new_context().new_page()
 
-        # --- ログイン & コンテスト検出 ---
+        # ログイン & コンテストID検出
         if not login_omc_with_playwright(page):
             sys.exit(1)
         page.goto(HOMEPAGE_URL, wait_until="networkidle")
@@ -205,51 +227,64 @@ def full_translate(contest_override: str|None):
             sys.exit(0)
         print(f"→ 対象 Contest ID = {current}")
 
-        # --- タスク一覧取得 ---
+        # タスク一覧取得
         task_ids = fetch_task_ids_playwright(page, current)
-        if not task_ids:
-            print(f"[Warning] {current} にタスクなし")
-        else:
-            print(f"→ {current} のタスク一覧 = {task_ids}")
+        print(f"→ {current} のタスク一覧 = {task_ids}")
 
-        # --- 日本語取得 & 各言語翻訳 & commit/push ---
-        langs = json.loads(LANG_CONFIG_PATH.read_text(encoding="utf-8")).get("languages",[])
-        ordered = ["en"] + [l for l in langs if l!="en"]
+        # 日本語版を保存
         for tid in task_ids:
-            jp = save_jp_problem(current, tid, page)
-            if not jp: continue
+            save_jp_problem(current, tid, page)
 
-        # ① 英語まとめて
+        # 言語順の読み込み（config.json の ["en", 他...]）
+        langs = json.loads(LANG_CONFIG_PATH.read_text(encoding="utf-8")).get("languages", [])
+        ordered = ["en"] + [l for l in langs if l!="en"]
+
+        # ── ① 英語まとめて翻訳 & コミット
         for tid in task_ids:
             jp_path = OUTPUT_ROOT/"ja"/"contests"/current/"tasks"/f"{tid}.html"
             out_en = OUTPUT_ROOT/"en"/"contests"/current/"tasks"/f"{tid}.html"
             if not out_en.exists():
-                translate_html_for_lang(jp_path.read_text(), "task", "en")
+                # ディレクトリ作成
+                out_en.parent.mkdir(parents=True, exist_ok=True)
+                # 翻訳結果を書き込み
+                translated = translate_html_for_lang(jp_path.read_text(encoding="utf-8"), "task", "en")
+                out_en.write_text(translated, encoding="utf-8")
+                # KaTeX レンダリング & 中央寄せ
                 render_html_with_playwright(page, out_en)
                 change_problem_display(current, tid, "en")
-                # commit & push
-                subprocess.run(["git","config","--local","user.name","github-actions[bot]"],check=True)
-                subprocess.run(["git","config","--local","user.email","github-actions[bot]@users.noreply.github.com"],check=True)
-                subprocess.run(["git","add",str(out_en)],check=True)
-                subprocess.run(["git","commit","-m",f"Add {out_en}"],check=True)
-                subprocess.run(["git","push","origin","HEAD:main"],check=True)
+                # Git commit & push
+                try:
+                    subprocess.run(["git","config","--local","user.name","github-actions[bot]"], check=True)
+                    subprocess.run(["git","config","--local","user.email","github-actions[bot]@users.noreply.github.com"], check=True)
+                    subprocess.run(["git","add", str(out_en)], check=True)
+                    subprocess.run(["git","commit","-m", f"Add {out_en}"], check=True)
+                    subprocess.run(["git","push","origin","HEAD:main"], check=True)
+                    print(f"[Git] {out_en} を commit & push")
+                except subprocess.CalledProcessError as e:
+                    print(f"[Error] Git 操作中に例外発生: {e}")
 
-        # ② その他インタリーブ
+        # ── ② その他言語 (インタリーブ) 翻訳 & コミット
         for tid in task_ids:
+            jp_path = OUTPUT_ROOT/"ja"/"contests"/current/"tasks"/f"{tid}.html"
             for lang in ordered[1:]:
-                jp_path = OUTPUT_ROOT/"ja"/"contests"/current/"tasks"/f"{tid}.html"
                 out_p = OUTPUT_ROOT/lang/"contests"/current/"tasks"/f"{tid}.html"
                 if not out_p.exists():
-                    translate_html_for_lang(jp_path.read_text(), "task", lang)
+                    out_p.parent.mkdir(parents=True, exist_ok=True)
+                    translated = translate_html_for_lang(jp_path.read_text(encoding="utf-8"), "task", lang)
+                    out_p.write_text(translated, encoding="utf-8")
                     render_html_with_playwright(page, out_p)
                     change_problem_display(current, tid, lang)
-                    subprocess.run(["git","config","--local","user.name","github-actions[bot]"],check=True)
-                    subprocess.run(["git","config","--local","user.email","github-actions[bot]@users.noreply.github.com"],check=True)
-                    subprocess.run(["git","add",str(out_p)],check=True)
-                    subprocess.run(["git","commit","-m",f"Add {out_p}"],check=True)
-                    subprocess.run(["git","push","origin","HEAD:main"],check=True)
+                    try:
+                        subprocess.run(["git","config","--local","user.name","github-actions[bot]"], check=True)
+                        subprocess.run(["git","config","--local","user.email","github-actions[bot]@users.noreply.github.com"], check=True)
+                        subprocess.run(["git","add", str(out_p)], check=True)
+                        subprocess.run(["git","commit","-m", f"Add {out_p}"], check=True)
+                        subprocess.run(["git","push","origin","HEAD:main"], check=True)
+                        print(f"[Git] {out_p} を commit & push")
+                    except subprocess.CalledProcessError as e:
+                        print(f"[Error] Git 操作中に例外発生: {e}")
 
-        # --- JSON出力用に duration_min を取得 ---
+        # ── JSON 出力用に duration_min を取得
         html_ct = fetch_url_html(f"{BASE_URL}/contests/{current}")
         soup2 = BeautifulSoup(html_ct, "html.parser")
         duration = 60
@@ -263,6 +298,7 @@ def full_translate(contest_override: str|None):
 
         print(json.dumps({"contest_id":current, "duration_min":duration}, ensure_ascii=False, separators=(',',':')))
         browser.close()
+
 
 
 def json_only(contest_override: str|None):
@@ -293,8 +329,9 @@ def json_only(contest_override: str|None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--contest", help="対象の Contest ID を指定（省略時は開催中を自動検出）")
-    parser.add_argument("--contest-json", action="store_true", help="contest_id と duration_min だけ JSON 出力")
+    parser.add_argument("--contest", help="対象の Contest ID 指定（省略時は開催中を自動検出）")
+    parser.add_argument("--contest-json", action="store_true",
+                        help="contest_id と duration_min のみ JSON 出力")
     args = parser.parse_args()
 
     if args.contest_json:
