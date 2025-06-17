@@ -16,7 +16,7 @@ def get_all_contests() -> list[str]:
             break
         out += names
         page += 1
-    return out
+        return out
 
 
 def run(cmd: str):
@@ -29,6 +29,7 @@ def main():
     for c in contests:
         run(f"python3 scripts/fetch_and_translate.py --contest {c}")
         run(f"python3 scripts/fetch_editorial.py --contest {c}")
+        run(f"python3 scripts/update_user_editorials.py --contest {c}")
 
 if __name__ == "__main__":
     main()
