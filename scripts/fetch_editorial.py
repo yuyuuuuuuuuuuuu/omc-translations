@@ -209,11 +209,11 @@ def render_html_with_playwright(page: Page, file_path: Path):
           src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
   <script defer
           src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"
-          onload="renderMathInElement(document.body, { 
+          onload="renderMathInElement(document.body, {
                     delimiters: [
-                      {left: '$$', right: '$$', display: true}, 
-                      {left: '$', right: '$', display: false}
-                    ] 
+                      {left: '$$', right: '$$', display: true},
+                      {left: '$',  right: '$',  display: false}
+                    ]
                   });"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
