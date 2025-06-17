@@ -138,7 +138,6 @@ def HtmlKatex(html: str) -> str:
 
 def ask_gpt(question: str, model: str, term: str) -> str:
     """
-    オリジナル Prompt をそのまま使用：
     HTML 形式の KaTeX 数式を含む日本語テキストをターゲット言語に翻訳し、
     フォーマットを崩さず HTML のみ返す。
     """
@@ -175,8 +174,6 @@ def translate_html_for_lang(jp_html: str, term: str, target_lang: str) -> str:
     return ask_gpt(latex_ready, GPT_MODEL, term)
 
 def render_html_with_playwright(page: Page, file_path: Path):
-    # （略：KaTeX レンダリングの実装は元のまま）
-    # --- 新規ファイル必ず存在する前提で呼び出されます ---
     new_header = """<!DOCTYPE html>
 <html>
 <head>
@@ -224,7 +221,6 @@ def render_html_with_playwright(page: Page, file_path: Path):
     print(f"[Rendered KaTeX] {file_path} をレンダリング済み HTML に変換しました。")
 
 def change_problem_display(contest_id: str, task_id: str, lang: str = "en"):
-    # （略：中央寄せ処理は元のまま）
     file_path = OUTPUT_ROOT / lang / "contests" / contest_id / "tasks" / f"{task_id}.html"
     if not file_path.exists():
         return
