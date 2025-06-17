@@ -49,23 +49,35 @@ def main():
     sleep_until(9)
     run("python3 scripts/fetch_and_translate.py")
 
-    # 3) コンテスト終了まで待機
-    #    fetch_and_translate.py に --contest-json オプションで duration_min を返すようにしていればそれを使う
-    print("→ コンテスト継続時間を取得...")
+    # 3) コンテスト終了時刻（開始 9:00 + duration_min）まで待機
+    print("→ コンテスト継続時間を取得…")
     cp = subprocess.run(
         "python3 scripts/fetch_and_translate.py --contest-json",
-        shell=True,
-        capture_output=True,
-        text=True
+        shell=True, capture_output=True, text=True
     )
     try:
-        import json
         j = json.loads(cp.stdout.strip().splitlines()[-1])
         dmin = int(j.get("duration_min", 60))
     except Exception:
         dmin = 60
-    print(f"→ コンテスト継続時間: {dmin} 分 → 待機")
-    time.sleep(dmin * 60)
+    print(f"→ Contest Duration = {dmin} 分")
+
+    # JST タイムゾーン定義
+    from datetime import datetime, time as dtime, timedelta, timezone
+    JST = timezone(timedelta(hours=9))
+    now = datetime.now(JST)
+    # 当日9:00 JST をコンテスト開始時刻とみなす
+    contest_start = now.replace(hour=9, minute=0, second=0, microsecond=0)
+    # 終了予定時刻
+    end_time = contest_start + timedelta(minutes=dmin)
+    sleep_sec = (end_time - now).total_seconds()
+    if sleep_sec > 0:
+        m, s = divmod(int(sleep_sec), 60)
+        print(f"→ 本当のコンテスト終了予定 ({end_time.time()}) まで {m} 分{s} 秒待機")
+        time.sleep(sleep_sec)
+    else:
+        print(f"→ コンテスト終了予定を過ぎています (現在 {now.time()})、すぐに解説取得へ")
+
 
     # 4) 解説翻訳
     run("python3 scripts/fetch_editorial.py")
