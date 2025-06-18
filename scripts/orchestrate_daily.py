@@ -67,7 +67,7 @@ def main():
     JST = timezone(timedelta(hours=9))
     now = datetime.now(JST)
     # 当日9:00 JST をコンテスト開始時刻とみなす
-    contest_start = now.replace(hour=9, minute=0, second=0, microsecond=0)
+    contest_start = now.replace(hour=21, minute=0, second=0, microsecond=0)
     # 終了予定時刻
     end_time = contest_start + timedelta(minutes=dmin)
     sleep_sec = (end_time - now).total_seconds()
