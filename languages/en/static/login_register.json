@@ -1,0 +1,15 @@
+{
+    "ログイン": "Login",
+    "新規登録": "Register",
+    "半角英数またはアンダースコア(_)を使用可能です．": "Alphanumeric characters and underscores (_) are allowed.",
+    "メールアドレス": "Email Address",
+    "パスワードの確認": "Confirm Password",
+    "パスワードをお忘れですか？": "Forgot your password?",
+    "パスワードをリセット": "Reset Password",
+    "パスワードリセットリンクの送信": "Send Password Reset Link",
+    "パスワード": "Password",
+    "8文字以上である必要があります．": "Must be at least 8 characters.",
+    "OMCからのメールを受け取る．": "Receive emails from OMC.",
+    "コンテスト開催が近づくと，コンテストのお知らせをメールでお送りします．": "You will receive email notifications as contests approach."
+  }
+  

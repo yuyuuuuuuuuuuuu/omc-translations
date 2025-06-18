@@ -28,6 +28,18 @@
         "dictionaries": ["donations"]
     },
     {
+        "paths": ["/settings"],
+        "dictionaries": ["settings"]
+    },
+    {
+        "paths": ["/change_password"],
+        "dictionaries": ["change_password"]
+    },
+    {
+        "paths": ["/login", "/register", "/password/reset"],
+        "dictionaries": ["login_register"]
+    },
+    {
         "paths": ["/contests/[^/]+"],
         "dictionaries": ["mins", "contests"]
     },
