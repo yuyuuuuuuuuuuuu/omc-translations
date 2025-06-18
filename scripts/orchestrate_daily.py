@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import datetime
+import json             
 import subprocess
 
 # ───────────────────────────────────────────────────────────
@@ -41,15 +42,15 @@ def sleep_until(hour: int, minute: int = 0):
 # メイン処理
 # ───────────────────────────────────────────────────────────
 def main():
-    # 1) 毎朝 8:00 JST → 参加登録
+    # 1) 毎日 20:00 JST → 参加登録
     sleep_until(20)
     run("python3 scripts/participate_today.py")
 
-    # 2) 9:00 JST → 問題文翻訳
+    # 2) 21:00 JST → 問題文翻訳
     sleep_until(21)
     run("python3 scripts/fetch_and_translate.py")
 
-    # 3) コンテスト終了時刻（開始 9:00 + duration_min）まで待機
+    # 3) コンテスト終了時刻（開始 21:00 + duration_min）まで待機
     print("→ コンテスト継続時間を取得…")
     cp = subprocess.run(
         "python3 scripts/fetch_and_translate.py --contest-json",
@@ -63,10 +64,10 @@ def main():
     print(f"→ Contest Duration = {dmin} 分")
 
     # JST タイムゾーン定義
-    from datetime import datetime, time as dtime, timedelta, timezone
+    from datetime import datetime, timedelta, timezone
     JST = timezone(timedelta(hours=9))
     now = datetime.now(JST)
-    # 当日9:00 JST をコンテスト開始時刻とみなす
+    # 当日21:00 JST をコンテスト開始時刻とみなす
     contest_start = now.replace(hour=21, minute=0, second=0, microsecond=0)
     # 終了予定時刻
     end_time = contest_start + timedelta(minutes=dmin)
@@ -77,7 +78,6 @@ def main():
         time.sleep(sleep_sec)
     else:
         print(f"→ コンテスト終了予定を過ぎています (現在 {now.time()})、すぐに解説取得へ")
-
 
     # 4) 解説翻訳
     run("python3 scripts/fetch_editorial.py")
