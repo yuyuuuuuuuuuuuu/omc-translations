@@ -42,11 +42,11 @@ def sleep_until(hour: int, minute: int = 0):
 # ───────────────────────────────────────────────────────────
 def main():
     # 1) 毎朝 8:00 JST → 参加登録
-    sleep_until(8)
+    sleep_until(20)
     run("python3 scripts/participate_today.py")
 
     # 2) 9:00 JST → 問題文翻訳
-    sleep_until(9)
+    sleep_until(21)
     run("python3 scripts/fetch_and_translate.py")
 
     # 3) コンテスト終了時刻（開始 9:00 + duration_min）まで待機
