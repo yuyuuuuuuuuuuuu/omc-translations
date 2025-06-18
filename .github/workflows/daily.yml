@@ -3,8 +3,8 @@ name: Daily OMC Automation
 on:
   workflow_dispatch:
   schedule:
-    # 毎日 23:00 UTC → 翌日 8:00 JST
-    - cron: '0 23 * * *'
+    # 毎日 23:00 UTC → 翌日 20:00 JST
+    - cron: '0 11 * * *'
 
 jobs:
   orchestrate:
