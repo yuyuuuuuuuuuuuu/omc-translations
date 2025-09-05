@@ -64,13 +64,13 @@ def main():
     print(f"→ Contest Duration = {dmin} 分")
 
     # JST タイムゾーン定義
-    from datetime import datetime, timedelta, timezone
-    JST = timezone(timedelta(hours=9))
-    now = datetime.now(JST)
+    JST = datetime.timezone(datetime.timedelta(hours=9))
+    now = datetime.datetime.now(JST)
+
     # 当日21:00 JST をコンテスト開始時刻とみなす
     contest_start = now.replace(hour=21, minute=0, second=0, microsecond=0)
     # 終了予定時刻
-    end_time = contest_start + timedelta(minutes=dmin)
+    end_time = contest_start + datetime.timedelta(minutes=dmin)
     sleep_sec = (end_time - now).total_seconds()
     if sleep_sec > 0:
         m, s = divmod(int(sleep_sec), 60)
