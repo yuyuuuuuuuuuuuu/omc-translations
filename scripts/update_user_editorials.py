@@ -29,13 +29,21 @@ THIS_DIR = Path(__file__).parent
 JA_ROOT  = THIS_DIR.parent / "languages" / "ja" / "contests"
 EN_ROOT  = THIS_DIR.parent / "languages" / "en" / "contests"
 
+# ★ 修正: OPENAI_KEY を正しく取得
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+
 if not OPENAI_KEY:
     print("[Error] 環境変数 OPENAI_API_KEY が設定されていません。", file=sys.stderr)
     sys.exit(1)
 openai.api_key = OPENAI_KEY
 
 GPT_MODEL = "gpt-4o-mini"
+
+# requests 用の最低限 UA
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; OMC-Translator/1.0; +https://github.com/yuyuuuuuuuuuuuu/omc-translations)",
+    "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+}
 
 # ユーザー解説ページの本文候補セレクタ（順に試す）
 EDITORIAL_SELECTORS: List[str] = [
@@ -54,16 +62,25 @@ EDITORIAL_SELECTORS: List[str] = [
 # ヘルパー関数
 # ───────────────────────────────────────────────────────────
 
+def fetch_text(url: str, timeout: int = 30) -> str:
+    try:
+        r = requests.get(url, timeout=timeout, headers=HEADERS)
+        r.raise_for_status()
+        return r.text
+    except Exception as e:
+        print(f"[HTTP] GET 失敗: {url} -> {e}", file=sys.stderr)
+        return ""
+
 def get_all_contests() -> List[str]:
     """全コンテスト一覧を取得"""
     out: List[str] = []
     page = 1
     while True:
         url = f"{BASE_URL}/contests/all?page={page}"
-        resp = requests.get(url)
-        if resp.status_code != 200:
+        html = fetch_text(url)
+        if not html:
             break
-        soup = BeautifulSoup(resp.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
         tbl = soup.find("div", class_="table-responsive")
         if not tbl:
             break
@@ -80,34 +97,58 @@ def get_all_contests() -> List[str]:
         page += 1
     return out
 
-def fetch_text(url: str, timeout: int = 30) -> str:
-    r = requests.get(url, timeout=timeout)
-    r.raise_for_status()
-    return r.text
+def list_task_ids_in_contest(contest: str) -> List[int]:
+    """コンテストの task_id 一覧を抽出（/contests/{contest} → ダメなら /contests/{contest}/tasks）"""
+    pat = re.compile(rf"/contests/{re.escape(contest)}/tasks/(\d+)")
+    ids: List[str] = []
+
+    html = fetch_text(f"{BASE_URL}/contests/{contest}")
+    if html:
+        ids = sorted(set(pat.findall(html)))
+    if not ids:
+        html = fetch_text(f"{BASE_URL}/contests/{contest}/tasks")
+        if html:
+            ids = sorted(set(pat.findall(html)))
+
+    return [int(x) for x in ids]
 
 def list_user_editorials_in_contest(contest: str) -> List[Tuple[int, int]]:
     """
-    /contests/{contest}/editorial から
-    /contests/{contest}/editorial/{task_id}/{user_id} を全て抽出。
+    ユーザー解説の (task_id, user_id) を列挙。
+    1) /contests/{contest}/editorial の一覧から抽出
+    2) 0件なら、各 /editorial/{task_id} を開いて抽出（フォールバック）
     """
+    # 1) 一覧ページから直接拾う
     index_url = f"{BASE_URL}/contests/{contest}/editorial"
-    try:
-        html = fetch_text(index_url)
-    except Exception as e:
-        print(f"[Info] {contest} の解説一覧ページ取得失敗: {e}")
-        return []
-    # 公式解説は /editorial/{task_id}（数値が1個）
-    # ユーザー解説は /editorial/{task_id}/{user_id}（数値が2個）
-    pat = re.compile(rf"/contests/{re.escape(contest)}/editorial/(\d+)/(\d+)")
-    pairs = sorted(set(pat.findall(html)))
-    out: List[Tuple[int, int]] = [(int(t), int(u)) for (t, u) in pairs]
-    return out
+    html = fetch_text(index_url)
+    pairs: List[Tuple[int, int]] = []
+
+    if html:
+        pat = re.compile(rf"/contests/{re.escape(contest)}/editorial/(\d+)/(\d+)")
+        found = sorted(set(pat.findall(html)))
+        pairs = [(int(t), int(u)) for (t, u) in found]
+
+    # 2) 0件なら task_id ごとに公式解説ページから拾う
+    if not pairs:
+        task_ids = list_task_ids_in_contest(contest)
+        print(f"[UserEditorial] fallback 探索: tasks={task_ids}")
+        pat_usr = re.compile(rf"/contests/{re.escape(contest)}/editorial/(\d+)/(\d+)")
+        for tid in task_ids:
+            eurl = f"{BASE_URL}/contests/{contest}/editorial/{tid}"
+            ehtml = fetch_text(eurl)
+            if not ehtml:
+                continue
+            found = pat_usr.findall(ehtml)
+            for t, u in found:
+                pairs.append((int(t), int(u)))
+
+        # 重複除去・整列
+        pairs = sorted(set(pairs))
+
+    return pairs
 
 def extract_content_with_playwright(page: Page, url: str) -> str:
-    """
-    Playwright でページを開き、本文をセレクタ候補で順に抽出。
-    候補が全て失敗したら body 全体を返す。
-    """
+    """Playwright で本文を抽出。候補が全滅の場合は body 全体。"""
     try:
         page.goto(url, wait_until="networkidle")
     except PlaywrightTimeoutError:
@@ -129,7 +170,6 @@ def extract_content_with_playwright(page: Page, url: str) -> str:
             continue
 
     try:
-        # 最後の手段：body 全体
         page.wait_for_selector("body", timeout=3000)
         return page.eval_on_selector("body", "el => el.innerHTML") or ""
     except Exception:
@@ -228,11 +268,14 @@ def save_user_editorials_for_contest(contest: str, page: Page, limit: int | None
         url = f"{BASE_URL}/contests/{contest}/editorial/{task_id}/{user_id}"
         print(f"[UserEditorial] target: {contest} task={task_id} user={user_id}")
 
-        # 保存パス（task_id/user_id.html）に変更：衝突防止
-        ja_path = JA_ROOT / contest / "user_editorial" / str(task_id) / f"{user_id}.html"
-        en_path = EN_ROOT / contest / "user_editorial" / str(task_id) / f"{user_id}.html"
-        ja_path.parent.mkdir(parents=True, exist_ok=True)
-        en_path.parent.mkdir(parents=True, exist_ok=True)
+        # 保存パス（task_id/user_id.html）: 衝突防止
+        ja_dir = JA_ROOT / contest / "user_editorial"
+        en_dir = EN_ROOT / contest / "user_editorial"
+        ja_dir.mkdir(parents=True, exist_ok=True)
+        en_dir.mkdir(parents=True, exist_ok=True)
+        ja_path = ja_dir / f"{user_id}.html"
+        en_path = en_dir / f"{user_id}.html"
+
 
         if dry_run:
             print(f"[DryRun] would fetch -> {url}")
@@ -268,7 +311,6 @@ def save_user_editorials_for_contest(contest: str, page: Page, limit: int | None
                 print(f"[Warn] KaTeX render skipped: {e}")
 
             committed.append(en_path)
-            # 1件ずつ push でも良いが、まとめての方が速い
             if len(committed) >= 20:
                 git_add_and_push(committed, f"Add user editorials for {contest} (batch)")
                 committed.clear()
