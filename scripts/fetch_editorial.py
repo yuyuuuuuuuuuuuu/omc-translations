@@ -24,6 +24,7 @@ LANG_CONFIG_PATH = Path(__file__).parents[1] / "languages" / "config.json"
 OUTPUT_ROOT      = Path(__file__).parents[1] / "languages"
 
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+
 if not OPENAI_KEY:
     print("[Error] 環境変数 OPENAI_API_KEY が設定されていません。")
     sys.exit(1)

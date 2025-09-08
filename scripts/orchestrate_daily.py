@@ -123,7 +123,7 @@ def main():
 
     # 6) 日付が７の倍数ならユーザー解説全更新
     today = datetime.datetime.now(tz=datetime.timezone(datetime.timedelta(hours=9)))
-    if today.day % 7 == 0:
+    if today.day % 29 == 0:
         run("python3 scripts/update_user_editorials.py")
         # ★ ユーザー解説でも JP 側の追加・修正があれば同期
         git_sync("Sync JA originals after user editorials")
