@@ -32,7 +32,6 @@ EN_ROOT  = THIS_DIR.parent / "languages" / "en" / "contests"
 # ★ 修正: OPENAI_KEY を正しく取得
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
-
 if not OPENAI_KEY:
     print("[Error] 環境変数 OPENAI_API_KEY が設定されていません。", file=sys.stderr)
     sys.exit(1)
