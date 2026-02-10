@@ -11,9 +11,9 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Page, Browser
 import openai
 
-# ───────────────────────────────────────────────────────────
+
 # 1) 設定項目
-# ───────────────────────────────────────────────────────────
+
 
 BASE_URL         = "https://onlinemathcontest.com"
 HOMEPAGE_URL     = BASE_URL + "/"
@@ -34,9 +34,9 @@ GPT_MODEL = "gpt-4o-mini"
 OMC_USERNAME = os.getenv("OMC_USERNAME", "")
 OMC_PASSWORD = os.getenv("OMC_PASSWORD", "")
 
-# ───────────────────────────────────────────────────────────
+
 # 2) 共通ヘルパー関数
-# ───────────────────────────────────────────────────────────
+
 
 def fetch_url_html(url: str) -> str:
     resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -199,9 +199,9 @@ def change_problem_display(contest_id: str, task_id: str, lang: str = "en"):
     file_path.write_text(str(soup), encoding="utf-8")
     print(f"[Wrapped display] {file_path}")
 
-# ───────────────────────────────────────────────────────────
+
 # 3) メインロジック
-# ───────────────────────────────────────────────────────────
+
 
 def full_translate(contest_override: str|None, no_login: bool):
     with sync_playwright() as p:
