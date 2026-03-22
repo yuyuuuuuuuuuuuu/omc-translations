@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
 import sys
 import time
@@ -14,9 +11,6 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Page, Browser
 import openai
 
-# ───────────────────────────────────────────────────────────
-# 1) 設定項目
-# ───────────────────────────────────────────────────────────
 
 BASE_URL         = "https://onlinemathcontest.com"
 HOMEPAGE_URL     = BASE_URL + "/"
@@ -30,10 +24,6 @@ if not OPENAI_KEY:
 openai.api_key = OPENAI_KEY
 GPT_MODEL = "gpt-4o-mini"
 
-# ───────────────────────────────────────────────────────────
-# 2) Git コミット＆プッシュ用ヘルパー
-# ───────────────────────────────────────────────────────────
-
 def git_add_and_push(file_path: Path):
     try:
         subprocess.run(["git", "config", "--local", "user.name", "github-actions[bot]"], check=True)
@@ -45,9 +35,6 @@ def git_add_and_push(file_path: Path):
     except subprocess.CalledProcessError as e:
         print(f"[Error] Git 操作中に例外発生: {e}")
 
-# ───────────────────────────────────────────────────────────
-# 3) 共通ヘルパー関数
-# ───────────────────────────────────────────────────────────
 
 def fetch_url_html(url: str) -> str:
     resp = requests.get(url, headers={"User-Agent":"Mozilla/5.0"})

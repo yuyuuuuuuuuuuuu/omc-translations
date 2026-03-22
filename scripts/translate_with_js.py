@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
 import sys
 import re
@@ -11,9 +8,6 @@ from bs4 import BeautifulSoup
 import openai
 from playwright.sync_api import sync_playwright, Page, Browser
 
-# ───────────────────────────────────────────────────────────
-# 設定
-# ───────────────────────────────────────────────────────────
 BASE_URL = "https://onlinemathcontest.com"
 THIS_DIR = Path(__file__).parent
 EN_ROOT  = THIS_DIR.parent / "languages" / "en" / "contests"
@@ -26,9 +20,6 @@ openai.api_key = OPENAI_KEY
 
 GPT_MODEL = "gpt-4o-mini"
 
-# ───────────────────────────────────────────────────────────
-# ヘルパー関数
-# ───────────────────────────────────────────────────────────
 def fetch_content_with_playwright(page: Page, url: str) -> str:
     """
     Headless Chromium でページを開き、
@@ -148,9 +139,6 @@ def wrap_display(file_path: Path):
         elt.wrap(wrapper)
     file_path.write_text(str(soup), encoding="utf-8")
 
-# ───────────────────────────────────────────────────────────
-# translate_specific_remote 関数
-# ───────────────────────────────────────────────────────────
 def translate_specific_remote(contest: str, item_id: str, kind: str, user_id: str = None):
     """
     contest: コンテストID
@@ -184,32 +172,26 @@ def translate_specific_remote(contest: str, item_id: str, kind: str, user_id: st
         browser: Browser = p.chromium.launch(headless=True)
         page = browser.new_context().new_page()
 
-        # 1) 動的に埋め込まれた HTML を取得
         print(f"→ Fetching content from {url}")
         raw_html = fetch_content_with_playwright(page, url)
 
-        # 2) Markdown ライクな装飾を HTML に
         md_html = apply_markdown(raw_html)
 
-        # 3) KaTeX→$...$化して GPT へ入力
         latex_ready = HtmlKatex(md_html)
         print("=== KaTeX Input to GPT ===")
         print(latex_ready)
         print("=== End of Input ===\n")
 
-        # 4) 翻訳
         translated = ask_gpt(latex_ready, GPT_MODEL, term)
         print("=== GPT Output ===")
         print(translated)
         print("=== End of Output ===\n")
 
-        # 5) languages/en/... に上書き保存
         en_path = EN_ROOT / contest / subdir / f"{outfile}.html"
         en_path.parent.mkdir(parents=True, exist_ok=True)
         en_path.write_text(translated, encoding="utf-8")
         print(f"→ Saved EN: {en_path}")
 
-        # 6) レンダリング & センターラップ
         render_html_with_playwright(page, en_path)
         wrap_display(en_path)
 
@@ -217,9 +199,6 @@ def translate_specific_remote(contest: str, item_id: str, kind: str, user_id: st
 
     print(f"[Done] translate_specific_remote({kind}, {contest}, {item_id})")
 
-# ───────────────────────────────────────────────────────────
-# CLI
-# ───────────────────────────────────────────────────────────
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("kind",

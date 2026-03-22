@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
 import sys
 import re
@@ -20,16 +17,11 @@ from playwright.sync_api import (
 )
 import openai
 
-# ───────────────────────────────────────────────────────────
-# 設定
-# ───────────────────────────────────────────────────────────
-
 BASE_URL = "https://onlinemathcontest.com"
 THIS_DIR = Path(__file__).parent
 JA_ROOT  = THIS_DIR.parent / "languages" / "ja" / "contests"
 EN_ROOT  = THIS_DIR.parent / "languages" / "en" / "contests"
 
-# ★ 修正: OPENAI_KEY を正しく取得
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
 if not OPENAI_KEY:
@@ -39,13 +31,11 @@ openai.api_key = OPENAI_KEY
 
 GPT_MODEL = "gpt-4o-mini"
 
-# requests 用の最低限 UA
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; OMC-Translator/1.0; +https://github.com/yuyuuuuuuuuuuuu/omc-translations)",
     "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
 }
 
-# ユーザー解説ページの本文候補セレクタ（順に試す）
 EDITORIAL_SELECTORS: List[str] = [
     "#editorial_content",
     "#editorial-content",
@@ -58,9 +48,6 @@ EDITORIAL_SELECTORS: List[str] = [
     "div.container #content",
 ]
 
-# ───────────────────────────────────────────────────────────
-# ヘルパー関数
-# ───────────────────────────────────────────────────────────
 
 def fetch_text(url: str, timeout: int = 30) -> str:
     try:
@@ -118,7 +105,6 @@ def list_user_editorials_in_contest(contest: str) -> List[Tuple[int, int]]:
     1) /contests/{contest}/editorial の一覧から抽出
     2) 0件なら、各 /editorial/{task_id} を開いて抽出（フォールバック）
     """
-    # 1) 一覧ページから直接拾う
     index_url = f"{BASE_URL}/contests/{contest}/editorial"
     html = fetch_text(index_url)
     pairs: List[Tuple[int, int]] = []
@@ -128,7 +114,6 @@ def list_user_editorials_in_contest(contest: str) -> List[Tuple[int, int]]:
         found = sorted(set(pat.findall(html)))
         pairs = [(int(t), int(u)) for (t, u) in found]
 
-    # 2) 0件なら task_id ごとに公式解説ページから拾う
     if not pairs:
         task_ids = list_task_ids_in_contest(contest)
         print(f"[UserEditorial] fallback 探索: tasks={task_ids}")
@@ -142,7 +127,6 @@ def list_user_editorials_in_contest(contest: str) -> List[Tuple[int, int]]:
             for t, u in found:
                 pairs.append((int(t), int(u)))
 
-        # 重複除去・整列
         pairs = sorted(set(pairs))
 
     return pairs
@@ -244,16 +228,12 @@ def git_add_and_push(paths: List[Path], message: str):
     subprocess.run(["git","config","--local","user.name","github-actions[bot]"], check=True)
     subprocess.run(["git","config","--local","user.email","github-actions[bot]@users.noreply.github.com"], check=True)
     subprocess.run(["git","add","-A"], check=True)
-    # 差分なしなら何もしない
     if subprocess.run(["git","diff","--cached","--quiet"]).returncode == 0:
         return
     subprocess.run(["git","commit","-m", message], check=True)
     subprocess.run(["git","pull","--rebase"], check=True)
     subprocess.run(["git","push","origin","HEAD:main"], check=True)
 
-# ───────────────────────────────────────────────────────────
-# メイン：ユーザー解説取得＆翻訳
-# ───────────────────────────────────────────────────────────
 
 def save_user_editorials_for_contest(contest: str, page: Page, limit: int | None = None, dry_run: bool = False):
     """指定コンテストのユーザー解説をすべて取得・翻訳・保存"""
@@ -268,7 +248,6 @@ def save_user_editorials_for_contest(contest: str, page: Page, limit: int | None
         url = f"{BASE_URL}/contests/{contest}/editorial/{task_id}/{user_id}"
         print(f"[UserEditorial] target: {contest} task={task_id} user={user_id}")
 
-        # 保存パス（task_id/user_id.html）: 衝突防止
         ja_dir = JA_ROOT / contest / "user_editorial"
         en_dir = EN_ROOT / contest / "user_editorial"
         ja_dir.mkdir(parents=True, exist_ok=True)
@@ -282,7 +261,6 @@ def save_user_editorials_for_contest(contest: str, page: Page, limit: int | None
             print(f"[DryRun] would save -> {ja_path} / {en_path}")
             continue
 
-        # 日本語保存
         if not ja_path.exists():
             html = extract_content_with_playwright(page, url)
             if html.strip():
@@ -294,7 +272,6 @@ def save_user_editorials_for_contest(contest: str, page: Page, limit: int | None
         else:
             print(f"[Skip JP USER] {ja_path}")
 
-        # 英語翻訳
         if not en_path.exists():
             jp_html = ja_path.read_text(encoding="utf-8")
             translated = translate_html_for_lang(jp_html, "user editorial", "en")
@@ -304,7 +281,6 @@ def save_user_editorials_for_contest(contest: str, page: Page, limit: int | None
             en_path.write_text(translated, encoding="utf-8")
             print(f"[Saved EN USER] {en_path}")
 
-            # KaTeX レンダリング
             try:
                 render_html_with_playwright(page, en_path)
             except Exception as e:
@@ -317,7 +293,6 @@ def save_user_editorials_for_contest(contest: str, page: Page, limit: int | None
         else:
             print(f"[Skip EN USER] {en_path}")
 
-    # 端数 push
     if committed:
         git_add_and_push(committed, f"Add user editorials for {contest}")
 

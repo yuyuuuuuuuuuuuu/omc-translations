@@ -1,5 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# Local Usage
+# export OPENAI_API_KEY="openai key here"
+# python3 python3 translate_specific.py task omcb001 20
 
 import os
 import sys
@@ -9,9 +10,6 @@ from bs4 import BeautifulSoup
 import openai
 from playwright.sync_api import sync_playwright, Page, Browser
 
-# ───────────────────────────────────────────────────────────
-# 設定
-# ───────────────────────────────────────────────────────────
 THIS_DIR    = Path(__file__).parent
 JA_ROOT     = THIS_DIR.parent / "languages" / "ja" / "contests"
 EN_ROOT     = THIS_DIR.parent / "languages" / "en" / "contests"
@@ -22,11 +20,29 @@ if not OPENAI_KEY:
     sys.exit(1)
 openai.api_key = OPENAI_KEY
 
-GPT_MODEL = "gpt-4o-mini"
+GPT_MODEL = "gpt-5-mini"
 
-# ───────────────────────────────────────────────────────────
+SYSTEM_PROMPT = """You are a translation engine for Japanese mathematical content.
+Task:
+Translate Japanese natural language in the given HTML into fluent English.
+
+Hard constraints:
+- Return ONLY translated HTML.
+- Preserve the HTML structure exactly.
+- Preserve every tag, attribute, class, style, entity, and line break exactly as they appear.
+- Preserve all mathematics exactly.
+- Do NOT modify any LaTeX/TeX command, math variable, symbol, delimiter, brace, underscore, superscript, or spacing inside math expressions.
+- Any expression that is already inside $...$, $$...$$, \\(...\\), \\[...\\], or inside KaTeX-related HTML must be copied exactly without changes.
+- Do NOT add, remove, or relocate math delimiters.
+- Do NOT rewrite mathematical notation into plain text.
+- Translate only the Japanese natural language prose.
+- If a token looks like mathematical notation, treat it as math and preserve it exactly.
+
+Important:
+If there is any conflict between fluency and preservation, preservation wins.
+"""
+
 # ヘルパー関数
-# ───────────────────────────────────────────────────────────
 def HtmlKatex(html: str) -> str:
     """Embedded KaTeX → $...$."""
     soup = BeautifulSoup(html, "html.parser")
@@ -41,15 +57,9 @@ def ask_gpt(question: str, model: str, term: str) -> str:
     resp = openai.ChatCompletion.create(
         model=model,
         messages=[
-            {"role":"system","content":(
-                f"The text you are about to receive is HTML-formatted KaTeX math {term} written in Japanese.\n"
-                "Please translate all sentences into English, preserving all KaTeX formatting\n"
-                "(font size, line breaks, class=\"katex-display\" for display formulas, etc.).\n"
-                "Return ONLY the translated HTML; do not wrap it in extra tags."
-            )},
+            {"role":"system","content":SYSTEM_PROMPT},
             {"role":"user","content":question}
-        ],
-        temperature=0.0
+        ]
     )
     return resp.choices[0].message.content.strip()
 
@@ -97,9 +107,7 @@ def wrap_display(file_path: Path):
         elt.wrap(wrapper)
     file_path.write_text(str(soup), encoding="utf-8")
 
-# ───────────────────────────────────────────────────────────
-# translate_specific 関数
-# ───────────────────────────────────────────────────────────
+
 def translate_specific(contest: str, item_id: str, kind: str):
     """
     contest: コンテストID
@@ -153,9 +161,6 @@ def translate_specific(contest: str, item_id: str, kind: str):
 
     print(f"[Done] translate_specific({kind}, {contest}, {item_id})")
 
-# ───────────────────────────────────────────────────────────
-# CLI
-# ───────────────────────────────────────────────────────────
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("kind",

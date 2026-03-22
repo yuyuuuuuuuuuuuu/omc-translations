@@ -12,7 +12,6 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 import openai
 
 
-# 1) 設定項目
 
 
 BASE_URL         = "https://onlinemathcontest.com"
@@ -20,7 +19,6 @@ HOMEPAGE_URL     = BASE_URL + "/"
 LANG_CONFIG_PATH = Path(__file__).parents[1] / "languages" / "config.json"
 OUTPUT_ROOT      = Path(__file__).parents[1] / "languages"
 
-# OpenAI API キー（必須）
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
 if not OPENAI_KEY:
@@ -30,12 +28,10 @@ openai.api_key = OPENAI_KEY
 
 GPT_MODEL = "gpt-4o-mini"
 
-# OMC ログイン情報（--no-login モードでは使用しません）
 OMC_USERNAME = os.getenv("OMC_USERNAME", "")
 OMC_PASSWORD = os.getenv("OMC_PASSWORD", "")
 
 
-# 2) 共通ヘルパー関数
 
 
 def fetch_url_html(url: str) -> str:
@@ -200,7 +196,6 @@ def change_problem_display(contest_id: str, task_id: str, lang: str = "en"):
     print(f"[Wrapped display] {file_path}")
 
 
-# 3) メインロジック
 
 
 def full_translate(contest_override: str|None, no_login: bool):
@@ -208,12 +203,10 @@ def full_translate(contest_override: str|None, no_login: bool):
         browser: Browser = p.chromium.launch(headless=True)
         page = browser.new_context().new_page()
 
-        # 必要ならログイン
         if not no_login:
             if not login_omc_with_playwright(page):
                 sys.exit(1)
 
-        # コンテスト検出
         page.goto(HOMEPAGE_URL, wait_until="networkidle")
         html = page.content()
         current = contest_override or find_current_contest(html)
@@ -223,19 +216,15 @@ def full_translate(contest_override: str|None, no_login: bool):
             sys.exit(0)
         print(f"→ 対象 Contest ID = {current}")
 
-        # タスク一覧取得
         task_ids = fetch_task_ids_playwright(page, current)
         print(f"→ {current} のタスク一覧 = {task_ids}")
 
-        # 日本語版取得
         for tid in task_ids:
             save_jp_problem(current, tid, page)
 
-        # 言語順取得
         langs = json.loads(LANG_CONFIG_PATH.read_text(encoding="utf-8")).get("languages", [])
         ordered = ["en"] + [l for l in langs if l!="en"]
 
-        # 英語まとめて
         for tid in task_ids:
             jp_path = OUTPUT_ROOT/"ja"/"contests"/current/"tasks"/f"{tid}.html"
             out_en = OUTPUT_ROOT/"en"/"contests"/current/"tasks"/f"{tid}.html"
@@ -254,7 +243,6 @@ def full_translate(contest_override: str|None, no_login: bool):
                 except subprocess.CalledProcessError as e:
                     print(f"[Error] Git exception: {e}")
 
-        # その他言語インタリーブ
         for tid in task_ids:
             jp_path = OUTPUT_ROOT/"ja"/"contests"/current/"tasks"/f"{tid}.html"
             for lang in ordered[1:]:
@@ -274,7 +262,6 @@ def full_translate(contest_override: str|None, no_login: bool):
                     except subprocess.CalledProcessError as e:
                         print(f"[Error] Git exception: {e}")
 
-        # duration_min だけ JSON 出力
         contest_html = fetch_url_html(f"{BASE_URL}/contests/{current}")
         soup2 = BeautifulSoup(contest_html, "html.parser")
         duration = 60

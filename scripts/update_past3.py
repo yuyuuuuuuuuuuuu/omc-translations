@@ -36,14 +36,10 @@ def run(cmd: str):
         print(f"[Warning] コマンド失敗: {cmd}")
 
 def main():
-    # 過去 3 コンテスト分だけ処理
     contests = get_past3_contests()
     for c in contests:
-        # (1) 問題文翻訳（過去コンテストはログイン不要モード）
         run(f"python3 scripts/fetch_and_translate.py --contest {c} --no-login")
-        # (2) 公式解説翻訳
         run(f"python3 scripts/fetch_editorial.py --contest {c}")
-        # (3) ユーザー解説翻訳
         run(f"python3 scripts/update_user_editorials.py --contest {c}")
 
 if __name__ == "__main__":
