@@ -12,8 +12,6 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 import openai
 
 
-
-
 BASE_URL         = "https://onlinemathcontest.com"
 HOMEPAGE_URL     = BASE_URL + "/"
 LANG_CONFIG_PATH = Path(__file__).parents[1] / "languages" / "config.json"

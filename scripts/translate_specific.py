@@ -1,11 +1,14 @@
 # Local Usage
 # export OPENAI_API_KEY="openai key here"
-# python3 python3 translate_specific.py task omcb001 20
+# python3 scripts/translate_specific.py task omcb001 20
+# python3 scripts/translate_specific.py task omc001 a
 
 import os
 import sys
+import re
 import argparse
 from pathlib import Path
+import requests
 from bs4 import BeautifulSoup
 import openai
 from playwright.sync_api import sync_playwright, Page, Browser
@@ -21,6 +24,29 @@ if not OPENAI_KEY:
 openai.api_key = OPENAI_KEY
 
 GPT_MODEL = "gpt-5-mini"
+BASE_URL = "https://onlinemathcontest.com"
+
+
+def resolve_alpha_to_id(contest: str, alpha: str) -> str:
+    """
+    アルファベット(a,b,c,...)をコンテストページから数値IDに解決する。
+    例: resolve_alpha_to_id("omc001", "a") -> "20"
+    """
+    url = f"{BASE_URL}/contests/{contest}"
+    html = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}).text
+    pattern = (
+        rf'href=["\']?{BASE_URL}/contests/{re.escape(contest)}/tasks/(\d+)["\']?>'
+        r'\s*\S+\(([A-Za-z])\)\s*</a>'
+    )
+    matches = re.findall(pattern, html)
+    alpha_upper = alpha.upper()
+    for item_id, letter in matches:
+        if letter.upper() == alpha_upper:
+            return item_id
+    print(f"[Error] Problem '{alpha}' not found in {url}", file=sys.stderr)
+    print(f"  Available: {', '.join(f'{l}={i}' for i, l in matches)}", file=sys.stderr)
+    sys.exit(1)
+
 
 SYSTEM_PROMPT = """You are a translation engine for Japanese mathematical content.
 Task:
@@ -167,7 +193,13 @@ if __name__ == "__main__":
                         choices=["task","editorial","user_editorial"],
                         help="Translate kind")
     parser.add_argument("contest", help="Contest ID (e.g. omcb047)")
-    parser.add_argument("item_id", help="Task ID, editorial ID, or user editorial ID")
+    parser.add_argument("item_id", help="Task ID (numeric) or problem letter (a,b,c,...)")
     args = parser.parse_args()
 
-    translate_specific(args.contest, args.item_id, args.kind)
+    item_id = args.item_id
+    if item_id.isalpha():
+        print(f"→ Resolving '{item_id}' for contest {args.contest}...")
+        item_id = resolve_alpha_to_id(args.contest, item_id)
+        print(f"→ Resolved to item_id={item_id}")
+
+    translate_specific(args.contest, item_id, args.kind)
