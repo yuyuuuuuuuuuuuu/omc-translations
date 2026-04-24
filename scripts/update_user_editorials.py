@@ -25,7 +25,7 @@ EN_ROOT  = THIS_DIR.parent / "languages" / "en" / "contests"
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
 if not OPENAI_KEY:
-    print("[Error] 環境変数 OPENAI_API_KEY が設定されていません。", file=sys.stderr)
+    print("[Error] OPENAI_API_KEY が設定されていません。", file=sys.stderr)
     sys.exit(1)
 openai.api_key = OPENAI_KEY
 

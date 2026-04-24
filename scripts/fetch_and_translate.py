@@ -20,7 +20,7 @@ OUTPUT_ROOT      = Path(__file__).parents[1] / "languages"
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
 if not OPENAI_KEY:
-    print("[Error] 環境変数 OPENAI_API_KEY が設定されていません。")
+    print("[Error] OPENAI_API_KEY が設定されていません。")
     sys.exit(1)
 openai.api_key = OPENAI_KEY
 

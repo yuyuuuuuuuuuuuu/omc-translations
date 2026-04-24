@@ -1,10 +1,10 @@
 {
-    "tasks": "OMC Translator will be discontinued as of April 20, 2026. After that date, this script may no longer function properly. If you are currently using it, please uninstall it. Thank you to everyone who has used OMC Translator.",
+    "tasks": "OMC Translator is no longer being provided. It may not work properly. If you currently have it installed, please uninstall it.",
     "tasks_not_done": "Translating the task may take anywhere from a few seconds to a few minutes. Please wait a little longer.",
-    "editorials": "OMC Translator will be discontinued as of April 20, 2026. After that date, this script may no longer function properly. If you are currently using it, please uninstall it. Thank you to everyone who has used OMC Translator.",
+    "editorials": "OMC Translator is no longer being provided. It may not work properly. If you currently have it installed, please uninstall it.",
     "editorial_not_done": "Translating the official editorial may take anywhere from a few seconds to a few minutes. Please wait a little longer.",
-    "user_editorial": "User editorials may be inaccurate or shown before editing. Please be aware.",
-    "user_editorial_not_done": "This user editorial has not been translated. If you'd like to request it, please contact @yuyu_0persent.",
+    "user_editorial": "User editorials may be inaccurate or shown before editing.",
+    "user_editorial_not_done": "This user editorial has not been translated.",
 
 
 
@@ -13,7 +13,7 @@
           "tasks_not_done": "Translating the task may take anywhere from a few seconds to a few minutes. Please wait a little longer.",
           "editorials": "The translation of the editorial does not guarantee accuracy. If there are issues with the display of symbols, please refer to the original Japanese version.",
           "editorial_not_done": "Translating the official editorial may take anywhere from a few seconds to a few minutes. Please wait a little longer.",
-          "user_editorial": "User editorials may be inaccurate or shown before editing. Please be aware.",
+          "user_editorial": "User editorials may be inaccurate or shown before editing.",
           "user_editorial_not_done": "This user editorial has not been translated. If you'd like to request it, please contact @yuyu_0persent."
     }
   }

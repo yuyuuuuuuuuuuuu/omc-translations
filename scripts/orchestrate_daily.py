@@ -49,19 +49,16 @@ def sleep_until(hour: int, minute: int = 0):
         print(f"→ {hour:02d}:{minute:02d} JST は既に過ぎているためスキップ (現在 {now.time().replace(microsecond=0)})")
 
 def main():
-    # 1) 20:00 JST → 参加登録
     sleep_until(20)
     run("python3 scripts/participate_today.py")
 
     git_sync("Sync after participate_today")
 
-    # 2) 21:00 JST → 問題文翻訳（ここで JP を保存、EN は生成 or Skip）
     sleep_until(21)
     run("python3 scripts/fetch_and_translate.py")
 
     git_sync("Sync JA originals after tasks")
 
-    # 3) コンテスト終了時刻まで待機
     print("→ コンテスト継続時間を取得…")
     cp = subprocess.run(
         "python3 scripts/fetch_and_translate.py --contest-json",

@@ -14,9 +14,6 @@ ojst = timezone(timedelta(hours=9))
 
 
 def get_today_contests() -> list[str]:
-    """
-    ホームページから「今日開催予定」のコンテストID一覧を取得する。
-    """
     resp = requests.get("https://onlinemathcontest.com/")
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -46,16 +43,13 @@ def get_today_contests() -> list[str]:
 
 
 def participate(username: str, password: str, contest: str) -> bool:
-    """
-    指定コンテストへの参加登録を行う。成功時 True。
-    """
     session = requests.Session()
     login_url = "https://onlinemathcontest.com/login"
     r = session.get(login_url); r.raise_for_status()
     soup = BeautifulSoup(r.text, "html.parser")
     token_input = soup.find("input", attrs={"name": "_token"})
     if not token_input or not token_input.has_attr("value"):
-        raise RuntimeError("CSRF トークンが取得できませんでした。")
+        raise RuntimeError("トークンが取得できませんでした。")
     csrf_token = token_input["value"]
 
     payload = {"_token": csrf_token, "display_name": username, "password": password}

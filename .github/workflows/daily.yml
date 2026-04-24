@@ -2,9 +2,9 @@ name: Daily OMC Automation
 
 on:
   workflow_dispatch:
-  schedule:
-    # 毎日 23:30 UTC = 20:30 JST
-    - cron: '30 11 * * *'
+  # schedule:
+  #   # 23:30 UTC = 20:30 JST
+  #   - cron: '30 11 * * *'
 
 jobs:
   orchestrate:
